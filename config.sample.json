@@ -1,0 +1,30 @@
+{
+	"$comment": "Copy to config.json (git-ignored) or point SRA_CONFIG at it. Key names follow phpRedisAdmin's config.",
+	"Servers": [
+		{
+			"name": "Dev redis1",
+			"host": "127.0.0.1",
+			"port": 33380,
+			"auth": null,
+			"db": 0,
+			"databases": 16,
+			"filter": null,
+			"separator": ":"
+		},
+		{
+			"name": "Dev redis2",
+			"host": "127.0.0.1",
+			"port": 33381,
+			"auth": null,
+			"db": 0,
+			"databases": 16,
+			"filter": null,
+			"separator": ":"
+		}
+	],
+	"login": [{ "username": "admin", "password": "admin" }],
+	"cookieSecret": "dev-secret-change-me",
+	"cookieName": "sra_session",
+	"maxKeyListSize": 100,
+	"maxValueLength": 8192
+}

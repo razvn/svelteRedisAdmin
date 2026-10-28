@@ -1,0 +1,31 @@
+# Development Redis instances for integration tests and manual testing.
+#   pnpm db:up -> redis1 on 127.0.0.1:33380 (databases 16, keys seeded),
+#                 redis2 on 127.0.0.1:33381 (empty, for the server-switcher)
+name: svelteredisadmin
+
+services:
+  redis1:
+    image: redis:7.4
+    container_name: sra-redis1
+    command: ['redis-server', '--databases', '16', '--save', '', '--appendonly', 'no']
+    ports:
+      - '33380:6379'
+    volumes:
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis2:
+    image: redis:7.4
+    container_name: sra-redis2
+    command: ['redis-server', '--databases', '16', '--save', '', '--appendonly', 'no']
+    ports:
+      - '33381:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 30
