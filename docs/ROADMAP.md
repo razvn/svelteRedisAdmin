@@ -68,8 +68,8 @@ makes sense, with a modern UI and a maintainable test suite.
       add key, rename, delete, export/import.
 - [x] **Phase 3 — Key editor**: view/edit string (with JSON detection), hash, list, set, zset,
       stream; TTL edit/persist; value formatting (pretty print, base64 for binary).
-- [ ] **Phase 4 — Extras**: command-line console (multi-command REPL), slowlog charts, key tree by
-      separator, pub/sub monitor.
+- [x] **Phase 4 — Extras**: command-line console (multi-command REPL) and key tree by separator done;
+      slowlog charts and pub/sub monitor remain.
 
 ## Working process (orchestration)
 

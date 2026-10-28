@@ -7,6 +7,9 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Folder from '@lucide/svelte/icons/folder';
+	import FolderOpen from '@lucide/svelte/icons/folder-open';
 	import Breadcrumbs from '#lib/components/app-shell/breadcrumbs.svelte';
 	import PageHeader from '#lib/components/app-shell/page-header.svelte';
 	import StatCard from '#lib/components/app-shell/stat-card.svelte';
@@ -27,6 +30,8 @@
 		wireFormValue,
 		wireText
 	} from '#lib/redis-format.ts';
+	import { buildKeyTree, countTreeKeys, flattenExpanded } from '#lib/key-tree.ts';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
 	import { bare, dbHref, dbTabHref, keyHref } from '#lib/nav/paths.ts';
 	import { DB_TABS, tabSubPath } from '#lib/nav/tabs.ts';
@@ -37,15 +42,46 @@
 	let selectedCount = $state(0);
 
 	const prevHref = $derived(
-		withParams(dbHref(data.serverIndex, data.db), { filter: data.filter, type: data.type })
+		withParams(dbHref(data.serverIndex, data.db), {
+			filter: data.filter,
+			type: data.type,
+			view: data.view
+		})
 	);
 	const nextHref = $derived(
 		withParams(dbHref(data.serverIndex, data.db), {
 			cursor: data.cursor,
 			filter: data.filter,
-			type: data.type
+			type: data.type,
+			view: data.view
 		})
 	);
+
+	/** Same page with the other browser view, keeping filter/type/cursor. */
+	function viewHref(view: 'list' | 'tree') {
+		return withParams(dbHref(data.serverIndex, data.db), {
+			view,
+			filter: data.filter,
+			type: data.type,
+			cursor: data.cursor || undefined
+		});
+	}
+
+	const tree = $derived(
+		buildKeyTree(
+			data.keys.map((item) => wireText(item.key)),
+			data.separator
+		)
+	);
+	/** Folder nodes the user opened; starts fully collapsed. */
+	const expanded = new SvelteSet<string>();
+	const treeRows = $derived(flattenExpanded(tree, expanded));
+	const keyInfo = $derived(new Map(data.keys.map((item) => [wireText(item.key), item])));
+
+	function toggleNode(name: string) {
+		if (expanded.has(name)) expanded.delete(name);
+		else expanded.add(name);
+	}
 
 	function countSelected(event: Event) {
 		const form = event.currentTarget as HTMLFormElement;
@@ -108,35 +144,63 @@
 
 	<Card.Root class="gap-0 py-0" data-testid="key-table">
 		<div class="flex flex-wrap items-center justify-between gap-3 border-b p-5">
-			<form
-				method="GET"
-				action={dbHref(data.serverIndex, data.db)}
-				class="flex flex-wrap items-center gap-2"
-			>
-				<Input
-					name="filter"
-					value={data.filter}
-					placeholder="pattern, e.g. app:*"
-					aria-label="Key filter"
-					class="w-56"
-				/>
-				<NativeSelect name="type" aria-label="Key type">
-					<option value="">All types</option>
-					{#each KEY_TYPES as option (option)}
-						<option value={option} selected={data.type === option}>{option}</option>
-					{/each}
-				</NativeSelect>
-				<Button type="submit" variant="outline" size="sm">Apply</Button>
-				<Button
-					variant="ghost"
-					size="sm"
-					href={withParams(dbHref(data.serverIndex, data.db), { type: data.type })}
+			<div class="flex flex-wrap items-center gap-2">
+				<form
+					method="GET"
+					action={dbHref(data.serverIndex, data.db)}
+					class="flex flex-wrap items-center gap-2"
 				>
-					Clear
-				</Button>
-			</form>
+					<Input
+						name="filter"
+						value={data.filter}
+						placeholder="pattern, e.g. app:*"
+						aria-label="Key filter"
+						class="w-56"
+					/>
+					<NativeSelect name="type" aria-label="Key type">
+						<option value="">All types</option>
+						{#each KEY_TYPES as option (option)}
+							<option value={option} selected={data.type === option}>{option}</option>
+						{/each}
+					</NativeSelect>
+					<input type="hidden" name="view" value={data.view} />
+					<Button type="submit" variant="outline" size="sm">Apply</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						href={withParams(dbHref(data.serverIndex, data.db), {
+							type: data.type,
+							view: data.view
+						})}
+					>
+						Clear
+					</Button>
+				</form>
+
+				<div class="flex items-center gap-1" role="group" aria-label="Browser view">
+					<Button
+						href={viewHref('list')}
+						variant={data.view === 'list' ? 'default' : 'ghost'}
+						size="sm"
+						aria-pressed={data.view === 'list'}
+					>
+						<List />
+						List
+					</Button>
+					<Button
+						href={viewHref('tree')}
+						variant={data.view === 'tree' ? 'default' : 'ghost'}
+						size="sm"
+						aria-pressed={data.view === 'tree'}
+					>
+						<ListTree />
+						Tree
+					</Button>
+				</div>
+			</div>
 
 			<form method="POST" action="?/flush" id="flush-form">
+				<input type="hidden" name="view" value={data.view} />
 				<AlertDialog.Root>
 					<AlertDialog.Trigger>
 						{#snippet child({ props })}
@@ -165,80 +229,153 @@
 		</div>
 
 		<Card.Content class="px-0">
-			<form method="POST" action="?/delete" onchange={countSelected}>
-				{#if data.keys.length === 0}
-					<p class="p-10 text-center text-sm text-muted-foreground">
-						No keys match {data.filter ? `“${data.filter}”` : 'this database'} — SCAN walked to the end
-						of the keyspace.
-					</p>
-				{:else}
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head class="w-10">
-									<input
-										type="checkbox"
-										class="size-4 accent-primary"
-										aria-label="Select all keys on this page"
-										onclick={toggleAll}
-									/>
-								</Table.Head>
-								<Table.Head>Key</Table.Head>
-								<Table.Head class="w-24">Type</Table.Head>
-								<Table.Head class="w-36">TTL</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each data.keys as item, index (wireFormValue(item.key) + index)}
-								{@const keyText = wireText(item.key)}
-								{@const pill = ttlPill(item.ttl)}
-								<Table.Row data-testid="key-row">
-									<Table.Cell>
-										<input
-											type="checkbox"
-											name="keys"
-											value={wireFormValue(item.key)}
-											class="size-4 accent-primary"
-											aria-label="Select {keyText}"
-										/>
-									</Table.Cell>
-									<Table.Cell class="max-w-0">
-										{#if item.key.kind === 'text'}
+			{#if data.view === 'tree'}
+				<div class="p-2" data-testid="key-tree">
+					{#if data.keys.length === 0}
+						<p class="p-10 text-center text-sm text-muted-foreground">
+							No keys match {data.filter ? `“${data.filter}”` : 'this database'} — SCAN walked to the
+							end of the keyspace.
+						</p>
+					{:else}
+						{#each treeRows as { node, depth } (node.name)}
+							{@const isExpanded = expanded.has(node.name)}
+							<div
+								data-testid="key-tree-node"
+								class="flex items-center gap-2 rounded-lg py-1 pr-2 hover:bg-muted/60"
+								style="padding-inline-start: {depth * 1.25 + 0.5}rem"
+							>
+								{#if node.children.length > 0}
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										aria-expanded={isExpanded}
+										aria-label="{isExpanded ? 'Collapse' : 'Expand'} {node.name}"
+										onclick={() => toggleNode(node.name)}
+									>
+										{#if isExpanded}
+											<ChevronDown />
+										{:else}
+											<ChevronRight />
+										{/if}
+									</Button>
+								{:else}
+									<span class="size-6" aria-hidden="true"></span>
+								{/if}
+								{#if isExpanded}
+									<FolderOpen class="size-4 shrink-0 text-primary" />
+								{:else}
+									<Folder class="size-4 shrink-0 text-muted-foreground" />
+								{/if}
+								<span class="truncate font-mono text-sm">{node.segment}</span>
+								<Badge variant="muted">{countTreeKeys(node)}</Badge>
+							</div>
+							{#if isExpanded || node.children.length === 0}
+								{#each node.keys as keyText (keyText)}
+									{@const item = keyInfo.get(keyText)}
+									{@const pill = item ? ttlPill(item.ttl) : null}
+									<div
+										class="flex items-center gap-2 rounded-lg py-1 pr-2 hover:bg-muted/60"
+										style="padding-inline-start: {(depth + 1) * 1.25 + 0.5}rem"
+									>
+										{#if item?.key.kind === 'text'}
 											<a
 												href={resolve(bare(keyHref(data.serverIndex, data.db, keyText)))}
-												class="block truncate font-mono text-foreground hover:text-primary hover:underline"
+												class="truncate font-mono text-foreground hover:text-primary hover:underline"
 											>
 												{keyText}
 											</a>
 										{:else}
-											<span class="block truncate font-mono text-muted-foreground">{keyText}</span>
-											<Badge variant="muted" class="mt-1">binary name</Badge>
+											<span class="truncate font-mono text-muted-foreground">{keyText}</span>
+											<Badge variant="muted">binary name</Badge>
 										{/if}
-									</Table.Cell>
-									<Table.Cell>
-										<Badge variant={keyTypeVariant(item.type)}>{item.type}</Badge>
-									</Table.Cell>
-									<Table.Cell>
-										<Badge variant={pill.variant}>{pill.label}</Badge>
-									</Table.Cell>
+										{#if item && pill}
+											<Badge variant={keyTypeVariant(item.type)}>{item.type}</Badge>
+											<Badge variant={pill.variant}>{pill.label}</Badge>
+										{/if}
+									</div>
+								{/each}
+							{/if}
+						{/each}
+					{/if}
+				</div>
+			{:else}
+				<form method="POST" action="?/delete" onchange={countSelected}>
+					{#if data.keys.length === 0}
+						<p class="p-10 text-center text-sm text-muted-foreground">
+							No keys match {data.filter ? `“${data.filter}”` : 'this database'} — SCAN walked to the
+							end of the keyspace.
+						</p>
+					{:else}
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.Head class="w-10">
+										<input
+											type="checkbox"
+											class="size-4 accent-primary"
+											aria-label="Select all keys on this page"
+											onclick={toggleAll}
+										/>
+									</Table.Head>
+									<Table.Head>Key</Table.Head>
+									<Table.Head class="w-24">Type</Table.Head>
+									<Table.Head class="w-36">TTL</Table.Head>
 								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				{/if}
+							</Table.Header>
+							<Table.Body>
+								{#each data.keys as item, index (wireFormValue(item.key) + index)}
+									{@const keyText = wireText(item.key)}
+									{@const pill = ttlPill(item.ttl)}
+									<Table.Row data-testid="key-row">
+										<Table.Cell>
+											<input
+												type="checkbox"
+												name="keys"
+												value={wireFormValue(item.key)}
+												class="size-4 accent-primary"
+												aria-label="Select {keyText}"
+											/>
+										</Table.Cell>
+										<Table.Cell class="max-w-0">
+											{#if item.key.kind === 'text'}
+												<a
+													href={resolve(bare(keyHref(data.serverIndex, data.db, keyText)))}
+													class="block truncate font-mono text-foreground hover:text-primary hover:underline"
+												>
+													{keyText}
+												</a>
+											{:else}
+												<span class="block truncate font-mono text-muted-foreground">{keyText}</span
+												>
+												<Badge variant="muted" class="mt-1">binary name</Badge>
+											{/if}
+										</Table.Cell>
+										<Table.Cell>
+											<Badge variant={keyTypeVariant(item.type)}>{item.type}</Badge>
+										</Table.Cell>
+										<Table.Cell>
+											<Badge variant={pill.variant}>{pill.label}</Badge>
+										</Table.Cell>
+									</Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					{/if}
 
-				<input type="hidden" name="filter" value={data.filter} />
-				<input type="hidden" name="type" value={data.type} />
-				{#if data.keys.length > 0}
-					<div class="flex items-center justify-between border-t p-5">
-						<span class="text-sm text-muted-foreground">{selectedCount} selected</span>
-						<Button type="submit" variant="destructive" size="sm" disabled={selectedCount === 0}>
-							<Trash2 />
-							Delete selected
-						</Button>
-					</div>
-				{/if}
-			</form>
+					<input type="hidden" name="filter" value={data.filter} />
+					<input type="hidden" name="type" value={data.type} />
+					<input type="hidden" name="view" value={data.view} />
+					{#if data.keys.length > 0}
+						<div class="flex items-center justify-between border-t p-5">
+							<span class="text-sm text-muted-foreground">{selectedCount} selected</span>
+							<Button type="submit" variant="destructive" size="sm" disabled={selectedCount === 0}>
+								<Trash2 />
+								Delete selected
+							</Button>
+						</div>
+					{/if}
+				</form>
+			{/if}
 
 			<div class="flex items-center justify-between border-t p-5">
 				<Button href={prevHref} disabled={data.isFirstPage} variant="outline" size="sm">

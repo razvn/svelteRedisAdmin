@@ -11,7 +11,8 @@ import type { Actions, PageServerLoad } from './$types';
 const querySchema = z.object({
 	cursor: z.coerce.number().int().min(0).catch(0),
 	filter: z.string().max(512).catch(''),
-	type: z.enum(['', ...KEY_TYPES]).catch('')
+	type: z.enum(['', ...KEY_TYPES]).catch(''),
+	view: z.enum(['list', 'tree']).catch('list')
 });
 
 /** Checkbox values are base64 of the raw key bytes (binary-safe round-trip). */
@@ -24,7 +25,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const query = querySchema.parse({
 		cursor: intParam(cursorParam),
 		filter: url.searchParams.get('filter') ?? locals.server.filter ?? '',
-		type: url.searchParams.get('type') ?? ''
+		type: url.searchParams.get('type') ?? '',
+		view: url.searchParams.get('view') ?? 'list'
 	});
 
 	const client = await locals.redis(db);
@@ -47,6 +49,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		dbsize,
 		filter: query.filter,
 		type: query.type,
+		view: query.view,
 		separator: locals.server.separator
 	};
 };
@@ -69,15 +72,22 @@ export const actions: Actions = {
 			303,
 			withParams(`/server/${locals.serverIndex}/db/${db}`, {
 				filter: String(raw.get('filter') ?? ''),
-				type: String(raw.get('type') ?? '')
+				type: String(raw.get('type') ?? ''),
+				view: String(raw.get('view') ?? '')
 			})
 		);
 	},
-	flush: async ({ locals, params }) => {
+	flush: async ({ request, locals, params }) => {
 		if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
 		const db = resolveDb(params, locals.server);
+		const raw = await request.formData();
 		const client = await locals.redis(db);
 		await flush(client, 'db');
-		redirect(303, `/server/${locals.serverIndex}/db/${db}`);
+		redirect(
+			303,
+			withParams(`/server/${locals.serverIndex}/db/${db}`, {
+				view: String(raw.get('view') ?? '')
+			})
+		);
 	}
 };
