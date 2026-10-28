@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Database from '@lucide/svelte/icons/database';
+	import { resolve } from '$app/paths';
 	import BrandMark from '#lib/components/app-shell/brand-mark.svelte';
+	import { bare } from '#lib/nav/paths.ts';
 	import { Alert, AlertDescription } from '#lib/components/ui/alert/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import * as Card from '#lib/components/ui/card/index.ts';
@@ -18,7 +20,7 @@
 <main
 	class="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-4 text-foreground"
 >
-	<a href="/" class="flex items-center gap-3" aria-label="svelteRedisAdmin home">
+	<a href={resolve(bare('/'))} class="flex items-center gap-3" aria-label="svelteRedisAdmin home">
 		<BrandMark />
 		<span class="text-lg font-semibold tracking-tight">svelteRedisAdmin</span>
 	</a>
