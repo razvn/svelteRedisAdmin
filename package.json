@@ -17,7 +17,7 @@
 		"test:e2e": "playwright test",
 		"test:client": "vitest run --project client",
 		"test:integration": "vitest run --project integration",
-		"db:up": "docker compose up -d --wait",
+		"db:up": "docker compose up -d --wait redis1 redis2",
 		"db:down": "docker compose down -v"
 	},
 	"devDependencies": {

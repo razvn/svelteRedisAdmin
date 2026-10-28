@@ -61,23 +61,28 @@ const PAGE = 100;
 
 /**
  * Reply normalizers: depending on the type mapping the same command comes back as a
- * `Map`, a flat pair array, an array of tuples or a plain object. `withMapping` is
- * always called on the buffers view, so values are Buffers.
+ * `Map`, a flat pair array, an array of tuples or a plain object — and node-redis
+ * decodes MAP KEYS to JS strings even on the buffers view, so keys are re-byted here.
  */
+function asBytes(value: unknown): Buffer {
+	return Buffer.isBuffer(value) ? value : Buffer.from(String(value), 'utf8');
+}
+
 function pairEntries(reply: unknown): [Buffer, Buffer][] {
-	if (reply instanceof Map) return [...reply.entries()] as [Buffer, Buffer][];
+	return rawPairs(reply).map(([name, value]) => [asBytes(name), asBytes(value)]);
+}
+
+function rawPairs(reply: unknown): [unknown, unknown][] {
+	if (reply instanceof Map) return [...reply.entries()];
 	if (Array.isArray(reply)) {
 		if (reply.every((entry) => Array.isArray(entry))) {
-			return reply as unknown as [Buffer, Buffer][];
+			return reply as unknown as [unknown, unknown][];
 		}
-		const flat: [Buffer, Buffer][] = [];
-		for (let i = 0; i + 1 < reply.length; i += 2)
-			flat.push([reply[i] as Buffer, reply[i + 1] as Buffer]);
+		const flat: [unknown, unknown][] = [];
+		for (let i = 0; i + 1 < reply.length; i += 2) flat.push([reply[i], reply[i + 1]]);
 		return flat;
 	}
-	if (reply && typeof reply === 'object') {
-		return Object.entries(reply) as unknown as [Buffer, Buffer][];
-	}
+	if (reply && typeof reply === 'object') return Object.entries(reply);
 	return [];
 }
 

@@ -1,0 +1,258 @@
+<script lang="ts">
+	import Database from '@lucide/svelte/icons/database';
+	import ListTree from '@lucide/svelte/icons/list-tree';
+	import List from '@lucide/svelte/icons/list';
+	import Plus from '@lucide/svelte/icons/plus';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import Breadcrumbs from '#lib/components/app-shell/breadcrumbs.svelte';
+	import PageHeader from '#lib/components/app-shell/page-header.svelte';
+	import StatCard from '#lib/components/app-shell/stat-card.svelte';
+	import TabBar from '#lib/components/app-shell/tab-bar.svelte';
+	import { Badge } from '#lib/components/ui/badge/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.ts';
+	import * as Card from '#lib/components/ui/card/index.ts';
+	import { Input } from '#lib/components/ui/input/index.ts';
+	import { NativeSelect } from '#lib/components/ui/native-select/index.ts';
+	import * as Table from '#lib/components/ui/table/index.ts';
+	import { formatNumber } from '#lib/format.ts';
+	import {
+		KEY_TYPES,
+		keyTypeVariant,
+		ttlPill,
+		withParams,
+		wireFormValue,
+		wireText
+	} from '#lib/redis-format.ts';
+	import { resolve } from '$app/paths';
+	import { bare, dbHref, dbTabHref, keyHref } from '#lib/nav/paths.ts';
+	import { DB_TABS, tabSubPath } from '#lib/nav/tabs.ts';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	let selectedCount = $state(0);
+
+	const prevHref = $derived(
+		withParams(dbHref(data.serverIndex, data.db), { filter: data.filter, type: data.type })
+	);
+	const nextHref = $derived(
+		withParams(dbHref(data.serverIndex, data.db), {
+			cursor: data.cursor,
+			filter: data.filter,
+			type: data.type
+		})
+	);
+
+	function countSelected(event: Event) {
+		const form = event.currentTarget as HTMLFormElement;
+		selectedCount = form.querySelectorAll<HTMLInputElement>('input[name="keys"]:checked').length;
+	}
+
+	/** Header checkbox: toggle every row checkbox of the bulk form. */
+	function toggleAll(source: Event) {
+		const box = source.currentTarget as HTMLInputElement;
+		const form = box.closest('form');
+		if (!form) return;
+		for (const row of form.querySelectorAll<HTMLInputElement>('input[name="keys"]')) {
+			row.checked = box.checked;
+		}
+		selectedCount = box.checked ? data.keys.length : 0;
+	}
+</script>
+
+<svelte:head><title>db{data.db} — svelteRedisAdmin</title></svelte:head>
+
+<div class="flex flex-col gap-6" data-testid="key-browser">
+	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
+
+	<TabBar
+		label="Database"
+		tabs={DB_TABS}
+		current=""
+		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
+	/>
+
+	<PageHeader
+		title="Keys in db{data.db}"
+		description="SCAN listing — use the filter to find keys fast"
+		icon={ListTree}
+	>
+		{#snippet actions()}
+			<Button href={dbTabHref(data.serverIndex, data.db, 'new-key')} size="sm">
+				<Plus />
+				New key
+			</Button>
+		{/snippet}
+	</PageHeader>
+
+	<div class="grid gap-4 sm:grid-cols-3">
+		<StatCard label="Total keys" value={formatNumber(data.dbsize)} icon={Database} tone="primary" />
+		<StatCard
+			label="Shown"
+			value={formatNumber(data.keys.length)}
+			icon={List}
+			tone="info"
+			hint={data.filter ? `filter ${data.filter}` : undefined}
+		/>
+		<StatCard
+			label="Next cursor"
+			value={data.cursor === 0 ? 'end' : data.cursor}
+			icon={RefreshCw}
+			tone="warning"
+		/>
+	</div>
+
+	<Card.Root class="gap-0 py-0" data-testid="key-table">
+		<div class="flex flex-wrap items-center justify-between gap-3 border-b p-5">
+			<form
+				method="GET"
+				action={dbHref(data.serverIndex, data.db)}
+				class="flex flex-wrap items-center gap-2"
+			>
+				<Input
+					name="filter"
+					value={data.filter}
+					placeholder="pattern, e.g. app:*"
+					aria-label="Key filter"
+					class="w-56"
+				/>
+				<NativeSelect name="type" aria-label="Key type">
+					<option value="">All types</option>
+					{#each KEY_TYPES as option (option)}
+						<option value={option} selected={data.type === option}>{option}</option>
+					{/each}
+				</NativeSelect>
+				<Button type="submit" variant="outline" size="sm">Apply</Button>
+				<Button
+					variant="ghost"
+					size="sm"
+					href={withParams(dbHref(data.serverIndex, data.db), { type: data.type })}
+				>
+					Clear
+				</Button>
+			</form>
+
+			<form method="POST" action="?/flush" id="flush-form">
+				<AlertDialog.Root>
+					<AlertDialog.Trigger>
+						{#snippet child({ props })}
+							<Button {...props} variant="destructive" size="sm">
+								<Trash2 />
+								Flush db{data.db}
+							</Button>
+						{/snippet}
+					</AlertDialog.Trigger>
+					<AlertDialog.Content>
+						<AlertDialog.Header>
+							<AlertDialog.Title>Flush db{data.db}?</AlertDialog.Title>
+							<AlertDialog.Description>
+								This deletes every key in database {data.db} on {data.label}. This cannot be undone.
+							</AlertDialog.Description>
+						</AlertDialog.Header>
+						<AlertDialog.Footer>
+							<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+							<AlertDialog.Action variant="destructive" type="submit" form="flush-form">
+								Flush db{data.db}
+							</AlertDialog.Action>
+						</AlertDialog.Footer>
+					</AlertDialog.Content>
+				</AlertDialog.Root>
+			</form>
+		</div>
+
+		<Card.Content class="px-0">
+			<form method="POST" action="?/delete" onchange={countSelected}>
+				{#if data.keys.length === 0}
+					<p class="p-10 text-center text-sm text-muted-foreground">
+						No keys match {data.filter ? `“${data.filter}”` : 'this database'} — SCAN walked to the end
+						of the keyspace.
+					</p>
+				{:else}
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head class="w-10">
+									<input
+										type="checkbox"
+										class="size-4 accent-primary"
+										aria-label="Select all keys on this page"
+										onclick={toggleAll}
+									/>
+								</Table.Head>
+								<Table.Head>Key</Table.Head>
+								<Table.Head class="w-24">Type</Table.Head>
+								<Table.Head class="w-36">TTL</Table.Head>
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							{#each data.keys as item, index (wireFormValue(item.key) + index)}
+								{@const keyText = wireText(item.key)}
+								{@const pill = ttlPill(item.ttl)}
+								<Table.Row data-testid="key-row">
+									<Table.Cell>
+										<input
+											type="checkbox"
+											name="keys"
+											value={wireFormValue(item.key)}
+											class="size-4 accent-primary"
+											aria-label="Select {keyText}"
+										/>
+									</Table.Cell>
+									<Table.Cell class="max-w-0">
+										{#if item.key.kind === 'text'}
+											<a
+												href={resolve(bare(keyHref(data.serverIndex, data.db, keyText)))}
+												class="block truncate font-mono text-foreground hover:text-primary hover:underline"
+											>
+												{keyText}
+											</a>
+										{:else}
+											<span class="block truncate font-mono text-muted-foreground">{keyText}</span>
+											<Badge variant="muted" class="mt-1">binary name</Badge>
+										{/if}
+									</Table.Cell>
+									<Table.Cell>
+										<Badge variant={keyTypeVariant(item.type)}>{item.type}</Badge>
+									</Table.Cell>
+									<Table.Cell>
+										<Badge variant={pill.variant}>{pill.label}</Badge>
+									</Table.Cell>
+								</Table.Row>
+							{/each}
+						</Table.Body>
+					</Table.Root>
+				{/if}
+
+				<input type="hidden" name="filter" value={data.filter} />
+				<input type="hidden" name="type" value={data.type} />
+				{#if data.keys.length > 0}
+					<div class="flex items-center justify-between border-t p-5">
+						<span class="text-sm text-muted-foreground">{selectedCount} selected</span>
+						<Button type="submit" variant="destructive" size="sm" disabled={selectedCount === 0}>
+							<Trash2 />
+							Delete selected
+						</Button>
+					</div>
+				{/if}
+			</form>
+
+			<div class="flex items-center justify-between border-t p-5">
+				<Button href={prevHref} disabled={data.isFirstPage} variant="outline" size="sm">
+					<ChevronLeft />
+					Previous page
+				</Button>
+				<span class="text-sm text-muted-foreground">
+					next cursor: {data.cursor === 0 ? 'end' : data.cursor}
+				</span>
+				<Button href={nextHref} disabled={data.cursor === 0} variant="outline" size="sm">
+					Next page
+					<ChevronRight />
+				</Button>
+			</div>
+		</Card.Content>
+	</Card.Root>
+</div>

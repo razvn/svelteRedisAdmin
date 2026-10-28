@@ -1,5 +1,5 @@
 # Development Redis instances for integration tests and manual testing.
-#   pnpm db:up -> redis1 on 127.0.0.1:33380 (databases 16, keys seeded),
+#   pnpm db:up -> redis1 on 127.0.0.1:33380 (seeded by the `seed` service),
 #                 redis2 on 127.0.0.1:33381 (empty, for the server-switcher)
 name: svelteredisadmin
 
@@ -10,8 +10,6 @@ services:
     command: ['redis-server', '--databases', '16', '--save', '', '--appendonly', 'no']
     ports:
       - '33380:6379'
-    volumes:
-      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -29,3 +27,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 30
+
+  # The official redis image has no init-hook, so seed from a one-shot client container.
+  seed:
+    image: redis:7.4
+    container_name: sra-seed
+    depends_on:
+      redis1:
+        condition: service_healthy
+    restart: 'no'
+    volumes:
+      - ./docker/initdb:/seed:ro
+    entrypoint: ['sh', '/seed/seed.sh']

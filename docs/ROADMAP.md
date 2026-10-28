@@ -59,14 +59,14 @@ makes sense, with a modern UI and a maintainable test suite.
 
 ## Phases
 
-- [ ] **Phase 0 — Foundation**: scaffold (Tailwind v4, shadcn-svelte, ESLint/Prettier, Vitest,
+- [x] **Phase 0 — Foundation**: scaffold (Tailwind v4, shadcn-svelte, ESLint/Prettier, Vitest,
       Playwright), docker-compose (Redis 7.4 ×2 on :33380/:33381 + seed), config loader (zod,
       unit-tested), cookie auth, app shell (sidebar: servers → databases, top bar, theme).
-- [ ] **Phase 1 — Server level**: home server cards, overview KPIs, INFO page, CONFIG, clients,
+- [x] **Phase 1 — Server level**: home server cards, overview KPIs, INFO page, CONFIG, clients,
       slowlog, flush db/all (guarded).
-- [ ] **Phase 2 — Key browser**: SCAN pagination + filter, type badges, TTL pills, bulk delete,
+- [x] **Phase 2 — Key browser**: SCAN pagination + filter, type badges, TTL pills, bulk delete,
       add key, rename, delete, export/import.
-- [ ] **Phase 3 — Key editor**: view/edit string (with JSON detection), hash, list, set, zset,
+- [x] **Phase 3 — Key editor**: view/edit string (with JSON detection), hash, list, set, zset,
       stream; TTL edit/persist; value formatting (pretty print, base64 for binary).
 - [ ] **Phase 4 — Extras**: command-line console (multi-command REPL), slowlog charts, key tree by
       separator, pub/sub monitor.
