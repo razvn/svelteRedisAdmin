@@ -8,7 +8,8 @@ export const SERVER_TABS: TabDef[] = [
 	{ id: 'info', label: 'Info' },
 	{ id: 'config', label: 'Config' },
 	{ id: 'clients', label: 'Clients' },
-	{ id: 'slowlog', label: 'Slow log' }
+	{ id: 'slowlog', label: 'Slow log' },
+	{ id: 'console', label: 'Console' }
 ];
 
 /** Tabs below `/server/[id]/db/[db]`. */

@@ -5,6 +5,7 @@ import Cog from '@lucide/svelte/icons/cog';
 import Users from '@lucide/svelte/icons/users';
 import Clock from '@lucide/svelte/icons/calendar-clock';
 import ListTree from '@lucide/svelte/icons/list-tree';
+import SquareTerminal from '@lucide/svelte/icons/square-terminal';
 import Plus from '@lucide/svelte/icons/plus';
 import FileDown from '@lucide/svelte/icons/file-down';
 import FileUp from '@lucide/svelte/icons/file-up';
@@ -19,6 +20,7 @@ export const TAB_ICONS: Record<string, Component> = {
 	clients: Users,
 	slowlog: Clock,
 	keys: ListTree,
+	console: SquareTerminal,
 	'new-key': Plus,
 	export: FileDown,
 	import: FileUp
