@@ -35,7 +35,7 @@ test.describe('login flow', () => {
 		await page.getByRole('button', { name: 'Sign in' }).click();
 		await expect(page.getByTestId('home')).toBeVisible();
 		await page.getByRole('button', { name: 'User menu' }).click();
-		await page.getByRole('button', { name: 'Log out' }).click();
+		await page.getByRole('menuitem', { name: 'Log out' }).click();
 		await expect(page).toHaveURL(/\/login$/);
 	});
 });

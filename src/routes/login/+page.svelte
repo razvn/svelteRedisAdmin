@@ -25,6 +25,8 @@
 		<span class="text-lg font-semibold tracking-tight">svelteRedisAdmin</span>
 	</a>
 
+	<h1 class="sr-only">Sign in</h1>
+
 	<Card.Root class="w-full max-w-sm gap-0 py-0">
 		<Card.Header class="border-b py-5">
 			<Card.Title>Sign in</Card.Title>
