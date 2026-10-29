@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t">
+	<title id="t">svelteRedisAdmin</title>
+	<defs>
+		<linearGradient id="sra-bg" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#6366F1" />
+			<stop offset="1" stop-color="#7C3AED" />
+		</linearGradient>
+		<linearGradient id="sra-ribbon" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#FF5A47" />
+			<stop offset="1" stop-color="#C81E12" />
+		</linearGradient>
+	</defs>
+	<rect width="64" height="64" rx="15" fill="url(#sra-bg)" />
+
+	<!-- Redis-style stack: three isometric plates, bottom first -->
+	<path d="M32 31 48.5 38.5 32 46 15.5 38.5Z" fill="#fff" fill-opacity=".35" />
+	<path d="M32 24 48.5 31.5 32 39 15.5 31.5Z" fill="#fff" fill-opacity=".6" />
+	<path d="M32 17 48.5 24.5 32 32 15.5 24.5Z" fill="#fff" />
+
+	<!-- the svelte S, in Redis red, sweeping across the stack -->
+	<path
+		d="M24.5 13.2C20.4 16.6 22 20.6 28 23.4l10.6 4.9c7.4 3.4 7.8 9.6 1 13.2C34.4 44.3 25.5 46 17 50"
+		fill="none"
+		stroke="url(#sra-ribbon)"
+		stroke-width="7"
+		stroke-linecap="round"
+	/>
+</svg>

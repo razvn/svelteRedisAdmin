@@ -10,7 +10,6 @@
 	"online": "en línea",
 	"offline": "desconectado",
 	"unknown": "desconocido",
-
 	"Server overview": "Resumen del servidor",
 	"Cannot reach this server": "No se puede conectar con este servidor",
 	"Redis version": "Versión de Redis",
@@ -33,14 +32,12 @@
 	"With expiry": "Con caducidad",
 	"Avg TTL (ms)": "TTL medio (ms)",
 	"No keyspace data reported by the server.": "El servidor no ha informado de ningún dato de espacio de claves.",
-
 	"Info": "Información",
 	"INFO output from the server": "Salida INFO del servidor",
 	"All sections": "Todas las secciones",
 	"{n} key": ["{n} clave", "{n} claves"],
 	"Raw": "Sin procesar",
 	"Untouched INFO reply.": "Respuesta INFO sin modificar.",
-
 	"Config": "Configuración",
 	"CONFIG GET and SET": "CONFIG GET y SET",
 	"Saved {param}": "{param} guardado",
@@ -53,7 +50,6 @@
 	"Parameters": "Parámetros",
 	"{shown} of {total}": "{shown} de {total}",
 	"No parameters match this filter.": "Ningún parámetro coincide con este filtro.",
-
 	"CLIENT LIST — connected clients": "CLIENT LIST — clientes conectados",
 	"{n} connected": "{n} conectado(s)",
 	"Disconnect a client with CLIENT KILL.": "Desconecte un cliente con CLIENT KILL.",
@@ -68,7 +64,6 @@
 	"No connected clients reported.": "No hay clientes conectados.",
 	"Invalid client id.": "ID de cliente no válido.",
 	"CLIENT KILL failed for id {id}.": "CLIENT KILL falló para el id {id}.",
-
 	"Slow log": "Registro lento",
 	"SLOWLOG GET — slowest commands": "SLOWLOG GET — comandos más lentos",
 	"Reset slow log": "Reiniciar el registro lento",
@@ -83,7 +78,6 @@
 	"The slow log is empty.": "El registro lento está vacío.",
 	"Missing confirmation.": "Falta la confirmación.",
 	"SLOWLOG RESET failed.": "SLOWLOG RESET falló.",
-
 	"Console": "Consola",
 	"Run Redis commands against db{db}. One command per line; quotes and # comments work like redis-cli.": "Ejecute comandos Redis contra la db{db}. Un comando por línea; las comillas y los comentarios # funcionan como en redis-cli.",
 	"db{db}": "db{db}",
@@ -96,7 +90,6 @@
 	"Show {n} characters": "Mostrar los {n} caracteres",
 	"binary": "binario",
 	"error": "error",
-
 	"Keys in db{db}": "Claves de la db{db}",
 	"SCAN listing — use the filter to find keys fast": "Listado SCAN — use el filtro para encontrar claves rápidamente",
 	"New key": "Nueva clave",
@@ -131,7 +124,6 @@
 	"Select at least one key to delete": "Seleccione al menos una clave para eliminar",
 	"no expiry": "sin caducidad",
 	"expired": "expirada",
-
 	"New key in db{db}": "Nueva clave en la db{db}",
 	"Create a key in db{db} on {label}.": "Cree una clave en la db{db} en {label}.",
 	"Key name": "Nombre de la clave",
@@ -153,7 +145,6 @@
 	"Sorted-set lines must be \"score member\", e.g. \"1.5 player:42\"": "Las líneas de zset deben tener el formato «score miembro», p. ej. \"1.5 player:42\"",
 	"Enter one list element per line": "Introduzca un elemento de lista por línea",
 	"Enter one set member per line": "Introduzca un miembro de set por línea",
-
 	"{label} · db{db} · {type} key": "{label} · db{db} · clave {type}",
 	"{n} byte": ["{n} byte", "{n} bytes"],
 	"{n} entry": ["{n} entrada", "{n} entradas"],
@@ -221,7 +212,6 @@
 	"Next": "Siguiente",
 	"offset {offset}": "desplazamiento {offset}",
 	"Save": "Guardar",
-
 	"Export": "Exportar",
 	"Export db{db}": "Exportar la db{db}",
 	"Download the keys of db{db} on {label} as a JSON dump.": "Descargue las claves de la db{db} en {label} como volcado JSON.",
@@ -233,7 +223,6 @@
 	"Import tab": "pestaña Importar",
 	"or go back to the": "o vuelva al",
 	"key browser": "navegador de claves",
-
 	"Import": "Importar",
 	"Import into db{db}": "Importar en la db{db}",
 	"Recreate keys in db{db} on {label} from a JSON dump.": "Recreate las claves de la db{db} en {label} a partir de un volcado JSON.",
@@ -252,7 +241,6 @@
 	"The file is too large (max 64 MB)": "El archivo es demasiado grande (máx. 64 MB)",
 	"The file is not valid JSON": "El archivo no es JSON válido",
 	"Unexpected dump shape: {message}": "Estructura de volcado inesperada: {message}",
-
 	"Actions": "Acciones",
 	"Cancel": "Cancelar",
 	"Edit": "Editar",
@@ -276,5 +264,6 @@
 	"Forbidden": "Prohibido",
 	"Server error": "Error del servidor",
 	"Error": "Error",
-	"Back to home": "Volver al inicio"
+	"Back to home": "Volver al inicio",
+	"Web admin for Redis databases.": "Administración web para bases de datos Redis."
 }
