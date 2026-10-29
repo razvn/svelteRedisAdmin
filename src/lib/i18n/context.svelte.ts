@@ -68,6 +68,9 @@ export interface Fmt {
 	dateTime: (value: Date | number | string) => string;
 }
 
+/** `new Date(...)` for formatting only — never mutated, so reactivity is not a concern. */
+const asDate = (value: Date | number | string): Date => new Date(value);
+
 export function makeFmt(tr: Translator): Fmt {
 	const nf = new Intl.NumberFormat(tr.intl);
 	const df = new Intl.DateTimeFormat(tr.intl, { dateStyle: 'medium' });
@@ -77,8 +80,8 @@ export function makeFmt(tr: Translator): Fmt {
 		seconds: (v) => formatSeconds(v),
 		micros: (v) => formatMicros(v),
 		bytes: (v) => formatBytes(v),
-		date: (v) => df.format(new Date(v)),
-		dateTime: (v) => dtf.format(new Date(v))
+		date: (v) => df.format(asDate(v)),
+		dateTime: (v) => dtf.format(asDate(v))
 	};
 }
 

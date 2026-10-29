@@ -106,6 +106,7 @@
 					/>
 				</div>
 				<p class="text-sm text-muted-foreground">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted catalog string, no user data -->
 					{@html i18n.t(
 						'Upload a file produced by the Export tab: <code class="font-mono">{"keys": [{"key": ..., "type": ..., "ttl": ..., "value": ...}]}</code>. Existing keys with the same name are overwritten.'
 					)}

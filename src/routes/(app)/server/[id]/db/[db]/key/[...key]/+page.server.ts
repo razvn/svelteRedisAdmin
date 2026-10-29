@@ -164,7 +164,6 @@ export const actions: Actions = {
 
 	delete: async ({ locals, params }) => {
 		const ctx = await keyContext(locals, params);
-		const t = locals.i18n.t;
 		await deleteKeys(ctx.client, [ctx.keyBuf]);
 		redirect(303, dbHref(ctx.serverIndex, ctx.db));
 	},

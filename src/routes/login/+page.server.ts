@@ -8,7 +8,7 @@ const loginSchema = z.object({
 	password: z.string().min(1, 'Enter the password')
 });
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async () => {
 	return { username: '', error: null };
 };
 

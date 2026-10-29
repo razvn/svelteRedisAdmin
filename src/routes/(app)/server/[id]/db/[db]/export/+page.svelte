@@ -59,6 +59,7 @@
 					/>
 				</div>
 				<p class="text-sm text-muted-foreground">
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted catalog string, no user data -->
 					{@html i18n.t(
 						'The dump holds one record per key: <code class="font-mono">{key, type, ttl, value}</code>. Collections are capped at 1,000 entries and the walk stops after 50,000 keys. Binary data is base64-tagged so imports are lossless.'
 					)}

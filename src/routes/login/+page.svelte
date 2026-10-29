@@ -34,11 +34,13 @@
 	<Card.Root class="w-full max-w-sm gap-0 py-0">
 		<Card.Header class="border-b py-5">
 			<Card.Title>{t('Sign in')}</Card.Title>
+			<!-- eslint-disable svelte/no-at-html-tags -- trusted catalog string, no user data -->
 			<Card.Description
 				>{@html i18n.t(
 					'Credentials from the <code>config.json</code> <code>login</code> list.'
 				)}</Card.Description
 			>
+			<!-- eslint-enable svelte/no-at-html-tags -->
 		</Card.Header>
 		<Card.Content class="p-5">
 			<form

@@ -113,11 +113,13 @@
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{t('Command input')}</Card.Title>
+			<!-- eslint-disable svelte/no-at-html-tags -- trusted catalog string, no user data -->
 			<Card.Description
 				>{@html i18n.t(
 					'One command per line. Empty lines and <code class="font-mono"># comments</code> are skipped.'
 				)}</Card.Description
 			>
+			<!-- eslint-enable svelte/no-at-html-tags -->
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			<form method="POST" action="?/run" class="flex flex-col gap-4">
