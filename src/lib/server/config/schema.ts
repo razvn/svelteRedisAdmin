@@ -29,13 +29,32 @@ export type ServerConfig = z.infer<typeof serverSchema>;
 
 export const loginSchema = z.object({
 	username: z.string().trim().min(1),
-	password: z.string().min(1)
+	password: z.string().min(1),
+	/** App role: admin (everything), rw (data read/write), ro (read-only). */
+	role: z.enum(['admin', 'rw', 'ro']).default('admin'),
+	/** Server indexes this user may see; absent = all servers. */
+	servers: z.array(z.number().int().min(0)).optional()
+});
+export type LoginConfig = z.infer<typeof loginSchema>;
+
+/** Pluggable authentication (`auth` in config.json). */
+export const authConfigSchema = z.object({
+	/** Built-in plugins: `config` (login form), `http` (Basic), `header` (ingress identity). */
+	plugin: z.string().trim().min(1).default('config'),
+	/** `header` plugin: request header carrying the username (e.g. `x-forwarded-user`). */
+	header: z.string().trim().min(1).optional(),
+	/** `header` plugin: request header carrying the role (defaults to `admin`). */
+	headerRole: z.string().trim().min(1).optional(),
+	/** `header` plugin: request header carrying a comma-separated server index list. */
+	headerServers: z.string().trim().min(1).optional()
 });
 
 export const appConfigSchema = z.object({
 	Servers: z.array(serverSchema).min(1),
 	/** When absent, the app auto-authenticates (phpRedisAdmin's default install). */
 	login: z.array(loginSchema).optional(),
+	/** Authentication plugin selection (`auth`); defaults to the config login list. */
+	auth: authConfigSchema.prefault({}),
 	/** HMAC secret for the session cookie. Required when `login` is configured. */
 	cookieSecret: z.string().min(16).optional(),
 	cookieName: z.string().trim().min(1).default('sra_session'),

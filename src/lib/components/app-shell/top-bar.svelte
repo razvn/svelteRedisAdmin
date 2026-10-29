@@ -15,6 +15,7 @@
 	interface Props {
 		session: {
 			user: string;
+			role: 'admin' | 'rw' | 'ro';
 			host: string;
 			serverLabel: string;
 			serverIndex: number;
@@ -94,6 +95,7 @@
 			<ThemeToggle />
 			<UserMenu
 				user={session.user}
+				role={session.role}
 				host={session.host}
 				serverLabel={session.serverLabel}
 				canLogout={session.canLogout}

@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
+import { assertWrite, canWrite } from '#lib/server/auth/access.ts';
 import { formatIfJson } from '#lib/value.ts';
 import { deleteKeys, expireKey, keyDetails, renameKey } from '#lib/server/redis/keys.ts';
 import {
@@ -30,6 +31,7 @@ const MAX_VALUE = 1_000_000;
 async function keyContext(locals: App.Locals, params: { db: string; key?: string }) {
 	const t = locals.i18n.t;
 	if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
+	assertWrite(locals);
 	const db = resolveDb(params, locals.server);
 	const key = keyNameSchema.safeParse(params.key);
 	if (!key.success) error(404, t('Key not found'));
@@ -114,7 +116,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			value.type === 'string' && value.value.kind === 'text'
 				? formatIfJson(value.value.text)
 				: null,
-		separator: locals.server.separator
+		separator: locals.server.separator,
+		canWrite: canWrite(locals.session)
 	};
 };
 

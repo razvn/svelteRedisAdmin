@@ -122,6 +122,11 @@
 			<!-- eslint-enable svelte/no-at-html-tags -->
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
+			{#if !data.canWrite}
+				<Alert>
+					<AlertDescription>{t('Read-only access: the console is disabled.')}</AlertDescription>
+				</Alert>
+			{/if}
 			<form method="POST" action="?/run" class="flex flex-col gap-4">
 				<Textarea
 					name="input"
@@ -129,26 +134,34 @@
 					bind:value={input}
 					class="font-mono text-sm"
 					placeholder={PLACEHOLDER}
+					disabled={!data.canWrite}
 				/>
 				<div class="flex flex-wrap items-center gap-2">
-					<Button type="submit">
+					<Button type="submit" disabled={!data.canWrite}>
 						<SquareTerminal data-icon="inline-start" />
 						{t('Run')}
 					</Button>
-					<Button type="button" variant="outline" onclick={() => (input = '')}>
+					<Button
+						type="button"
+						variant="outline"
+						onclick={() => (input = '')}
+						disabled={!data.canWrite}
+					>
 						{t('Clear')}
 					</Button>
 				</div>
 			</form>
 
-			<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-				{t('Examples:')}
-				{#each EXAMPLES as example (example)}
-					<Button type="button" variant="outline" size="sm" onclick={() => (input = example)}>
-						<code class="font-mono text-xs">{example}</code>
-					</Button>
-				{/each}
-			</div>
+			{#if data.canWrite}
+				<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+					{t('Examples:')}
+					{#each EXAMPLES as example (example)}
+						<Button type="button" variant="outline" size="sm" onclick={() => (input = example)}>
+							<code class="font-mono text-xs">{example}</code>
+						</Button>
+					{/each}
+				</div>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 

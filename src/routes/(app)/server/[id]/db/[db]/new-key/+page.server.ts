@@ -1,4 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { assertWrite, canWrite } from '#lib/server/auth/access.ts';
 import { createKey, createKeySchema } from '#lib/server/redis/create-key.ts';
 import { serverName } from '#lib/server/config/schema.ts';
 import { resolveDb } from '#lib/server/routing.ts';
@@ -18,7 +19,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	return {
 		serverIndex: locals.serverIndex,
 		db,
-		label: serverName(locals.server)
+		label: serverName(locals.server),
+		canWrite: canWrite(locals.session)
 	};
 };
 
@@ -26,6 +28,7 @@ export const actions: Actions = {
 	create: async ({ request, locals, params }) => {
 		const t = locals.i18n.t;
 		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
+		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
 		const form: NewKeyForm = {

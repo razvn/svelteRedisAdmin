@@ -122,10 +122,12 @@
 		icon={ListTree}
 	>
 		{#snippet actions()}
-			<Button href={dbTabHref(data.serverIndex, data.db, 'new-key')} size="sm">
-				<Plus />
-				{t('New key')}
-			</Button>
+			{#if data.canWrite}
+				<Button href={dbTabHref(data.serverIndex, data.db, 'new-key')} size="sm">
+					<Plus />
+					{t('New key')}
+				</Button>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
@@ -208,36 +210,38 @@
 				</div>
 			</div>
 
-			<form method="POST" action="?/flush" id="flush-form">
-				<input type="hidden" name="view" value={data.view} />
-				<AlertDialog.Root>
-					<AlertDialog.Trigger>
-						{#snippet child({ props })}
-							<Button {...props} variant="destructive" size="sm">
-								<Trash2 />
-								{t('Flush db{db}', { db: data.db })}
-							</Button>
-						{/snippet}
-					</AlertDialog.Trigger>
-					<AlertDialog.Content>
-						<AlertDialog.Header>
-							<AlertDialog.Title>{t('Flush db{db}?', { db: data.db })}</AlertDialog.Title>
-							<AlertDialog.Description>
-								{t('This deletes every key in database {db} on {label}. This cannot be undone.', {
-									db: data.db,
-									label: data.label
-								})}
-							</AlertDialog.Description>
-						</AlertDialog.Header>
-						<AlertDialog.Footer>
-							<AlertDialog.Cancel>{t('Cancel')}</AlertDialog.Cancel>
-							<AlertDialog.Action variant="destructive" type="submit" form="flush-form">
-								{t('Flush db{db}', { db: data.db })}
-							</AlertDialog.Action>
-						</AlertDialog.Footer>
-					</AlertDialog.Content>
-				</AlertDialog.Root>
-			</form>
+			{#if data.canWrite}
+				<form method="POST" action="?/flush" id="flush-form">
+					<input type="hidden" name="view" value={data.view} />
+					<AlertDialog.Root>
+						<AlertDialog.Trigger>
+							{#snippet child({ props })}
+								<Button {...props} variant="destructive" size="sm">
+									<Trash2 />
+									{t('Flush db{db}', { db: data.db })}
+								</Button>
+							{/snippet}
+						</AlertDialog.Trigger>
+						<AlertDialog.Content>
+							<AlertDialog.Header>
+								<AlertDialog.Title>{t('Flush db{db}?', { db: data.db })}</AlertDialog.Title>
+								<AlertDialog.Description>
+									{t('This deletes every key in database {db} on {label}. This cannot be undone.', {
+										db: data.db,
+										label: data.label
+									})}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
+							<AlertDialog.Footer>
+								<AlertDialog.Cancel>{t('Cancel')}</AlertDialog.Cancel>
+								<AlertDialog.Action variant="destructive" type="submit" form="flush-form">
+									{t('Flush db{db}', { db: data.db })}
+								</AlertDialog.Action>
+							</AlertDialog.Footer>
+						</AlertDialog.Content>
+					</AlertDialog.Root>
+				</form>
+			{/if}
 		</div>
 
 		<Card.Content class="px-0">
@@ -325,14 +329,16 @@
 						<Table.Root>
 							<Table.Header>
 								<Table.Row>
-									<Table.Head class="w-10">
-										<input
-											type="checkbox"
-											class="size-4 accent-primary"
-											aria-label={t('Select all keys on this page')}
-											onclick={toggleAll}
-										/>
-									</Table.Head>
+									{#if data.canWrite}
+										<Table.Head class="w-10">
+											<input
+												type="checkbox"
+												class="size-4 accent-primary"
+												aria-label={t('Select all keys on this page')}
+												onclick={toggleAll}
+											/>
+										</Table.Head>
+									{/if}
 									<Table.Head>{t('Key')}</Table.Head>
 									<Table.Head class="w-24">{t('Type')}</Table.Head>
 									<Table.Head class="w-36">{t('TTL')}</Table.Head>
@@ -343,15 +349,17 @@
 									{@const keyText = wireText(item.key)}
 									{@const pill = ttlPill(item.ttl)}
 									<Table.Row data-testid="key-row">
-										<Table.Cell>
-											<input
-												type="checkbox"
-												name="keys"
-												value={wireFormValue(item.key)}
-												class="size-4 accent-primary"
-												aria-label={t('Select {key}', { key: keyText })}
-											/>
-										</Table.Cell>
+										{#if data.canWrite}
+											<Table.Cell>
+												<input
+													type="checkbox"
+													name="keys"
+													value={wireFormValue(item.key)}
+													class="size-4 accent-primary"
+													aria-label={t('Select {key}', { key: keyText })}
+												/>
+											</Table.Cell>
+										{/if}
 										<Table.Cell class="max-w-0">
 											{#if item.key.kind === 'text'}
 												<a
@@ -381,7 +389,7 @@
 					<input type="hidden" name="filter" value={data.filter} />
 					<input type="hidden" name="type" value={data.type} />
 					<input type="hidden" name="view" value={data.view} />
-					{#if data.keys.length > 0}
+					{#if data.canWrite && data.keys.length > 0}
 						<div class="flex items-center justify-between border-t p-5">
 							<span class="text-sm text-muted-foreground">
 								{t('{n} selected', { n: selectedCount })}

@@ -31,13 +31,15 @@
 	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('slowlog')} {hrefFor} />
 	<PageHeader title={t('Slow log')} description={t('SLOWLOG GET — slowest commands')} icon={Clock}>
 		{#snippet actions()}
-			<form method="POST" action="?/reset">
-				<input type="hidden" name="confirm" value="1" />
-				<Button type="submit" variant="destructive">
-					<Trash2 />
-					{t('Reset slow log')}
-				</Button>
-			</form>
+			{#if data.canWrite}
+				<form method="POST" action="?/reset">
+					<input type="hidden" name="confirm" value="1" />
+					<Button type="submit" variant="destructive">
+						<Trash2 />
+						{t('Reset slow log')}
+					</Button>
+				</form>
+			{/if}
 		{/snippet}
 	</PageHeader>
 

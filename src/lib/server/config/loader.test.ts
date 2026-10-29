@@ -48,7 +48,41 @@ describe('parseConfig', () => {
 			login: [{ username: 'admin', password: 'admin' }],
 			cookieSecret: '0123456789abcdef'
 		});
-		expect(config.login).toEqual([{ username: 'admin', password: 'admin' }]);
+		expect(config.login).toEqual([{ username: 'admin', password: 'admin', role: 'admin' }]);
+		expect(config.auth).toMatchObject({ plugin: 'config' });
+	});
+
+	test('parses roles, per-user server lists and the auth plugin', () => {
+		const config = parseConfig({
+			Servers: [{ name: 'x' }],
+			login: [{ username: 'dev', password: 'pw', role: 'rw', servers: [0, 2] }],
+			cookieSecret: '0123456789abcdef',
+			auth: { plugin: 'header', header: 'x-forwarded-user' }
+		});
+		expect(config.login?.[0]).toEqual({
+			username: 'dev',
+			password: 'pw',
+			role: 'rw',
+			servers: [0, 2]
+		});
+		expect(config.auth).toEqual({ plugin: 'header', header: 'x-forwarded-user' });
+	});
+
+	test('rejects an unknown role and negative server indexes', () => {
+		expect(() =>
+			parseConfig({
+				Servers: [{}],
+				login: [{ username: 'a', password: 'b', role: 'superuser' }],
+				cookieSecret: '0123456789abcdef'
+			})
+		).toThrow(ConfigError);
+		expect(() =>
+			parseConfig({
+				Servers: [{}],
+				login: [{ username: 'a', password: 'b', servers: [-1] }],
+				cookieSecret: '0123456789abcdef'
+			})
+		).toThrow(ConfigError);
 	});
 
 	test('rejects login without cookieSecret', () => {

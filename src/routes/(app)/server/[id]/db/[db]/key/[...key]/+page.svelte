@@ -108,107 +108,110 @@
 				{t('Refresh')}
 			</Button>
 
-			<Dialog.Root>
-				<Dialog.Trigger>
-					{#snippet child({ props })}
-						<Button {...props} variant="outline" size="sm">
-							<Clock />
-							TTL
-						</Button>
-					{/snippet}
-				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-md">
-					<Dialog.Header>
-						<Dialog.Title>{t('Edit TTL')}</Dialog.Title>
-						<Dialog.Description>
-							{t('Current: {pill}. Set an expiry in seconds for this key.', {
-								pill: t(pill.label)
-							})}
-						</Dialog.Description>
-					</Dialog.Header>
-					<form method="POST" action="?/ttl" class="flex flex-col gap-4">
-						{@render offsetFields()}
-						<div class="flex flex-col gap-2">
-							<Label for="ttl-seconds">{t('Seconds')}</Label>
-							<Input
-								id="ttl-seconds"
-								name="seconds"
-								type="number"
-								min={0}
-								placeholder={t('no expiry')}
-							/>
-						</div>
-						<p class="text-sm text-muted-foreground">
-							{t('Empty or 0 removes the expiry (PERSIST); a positive value sets EXPIRE.')}
-						</p>
-						<Dialog.Footer>
-							<Button type="submit" size="sm">{t('Apply')}</Button>
-						</Dialog.Footer>
-					</form>
-				</Dialog.Content>
-			</Dialog.Root>
-
-			<Dialog.Root>
-				<Dialog.Trigger>
-					{#snippet child({ props })}
-						<Button {...props} variant="outline" size="sm">
-							<PenLine />
-							{t('Rename')}
-						</Button>
-					{/snippet}
-				</Dialog.Trigger>
-				<Dialog.Content class="sm:max-w-md">
-					<Dialog.Header>
-						<Dialog.Title>{t('Rename key')}</Dialog.Title>
-						<Dialog.Description>{t('Moving the key keeps its value and TTL.')}</Dialog.Description>
-					</Dialog.Header>
-					<form method="POST" action="?/rename" class="flex flex-col gap-4">
-						<div class="flex flex-col gap-2">
-							<Label for="rename-name">{t('New name')}</Label>
-							<Input
-								id="rename-name"
-								name="name"
-								required
-								maxlength={5120}
-								value={data.key}
-								class="font-mono"
-							/>
-						</div>
-						<Dialog.Footer>
-							<Button type="submit" size="sm">{t('Rename')}</Button>
-						</Dialog.Footer>
-					</form>
-				</Dialog.Content>
-			</Dialog.Root>
-
-			<form method="POST" action="?/delete" id="key-delete-form">
-				<AlertDialog.Root>
-					<AlertDialog.Trigger>
+			{#if data.canWrite}
+				<Dialog.Root>
+					<Dialog.Trigger>
 						{#snippet child({ props })}
-							<Button {...props} variant="destructive" size="sm">
-								<Trash2 />
-								{t('Delete')}
+							<Button {...props} variant="outline" size="sm">
+								<Clock />
+								TTL
 							</Button>
 						{/snippet}
-					</AlertDialog.Trigger>
-					<AlertDialog.Content>
-						<AlertDialog.Header>
-							<AlertDialog.Title>{t('Delete “{key}”?', { key: data.key })}</AlertDialog.Title>
-							<AlertDialog.Description>
-								{t('The {type} key and its value are removed. This cannot be undone.', {
-									type: data.type
+					</Dialog.Trigger>
+					<Dialog.Content class="sm:max-w-md">
+						<Dialog.Header>
+							<Dialog.Title>{t('Edit TTL')}</Dialog.Title>
+							<Dialog.Description>
+								{t('Current: {pill}. Set an expiry in seconds for this key.', {
+									pill: t(pill.label)
 								})}
-							</AlertDialog.Description>
-						</AlertDialog.Header>
-						<AlertDialog.Footer>
-							<AlertDialog.Cancel>{t('Cancel')}</AlertDialog.Cancel>
-							<AlertDialog.Action variant="destructive" type="submit" form="key-delete-form">
-								{t('Delete key')}
-							</AlertDialog.Action>
-						</AlertDialog.Footer>
-					</AlertDialog.Content>
-				</AlertDialog.Root>
-			</form>
+							</Dialog.Description>
+						</Dialog.Header>
+						<form method="POST" action="?/ttl" class="flex flex-col gap-4">
+							{@render offsetFields()}
+							<div class="flex flex-col gap-2">
+								<Label for="ttl-seconds">{t('Seconds')}</Label>
+								<Input
+									id="ttl-seconds"
+									name="seconds"
+									type="number"
+									min={0}
+									placeholder={t('no expiry')}
+								/>
+							</div>
+							<p class="text-sm text-muted-foreground">
+								{t('Empty or 0 removes the expiry (PERSIST); a positive value sets EXPIRE.')}
+							</p>
+							<Dialog.Footer>
+								<Button type="submit" size="sm">{t('Apply')}</Button>
+							</Dialog.Footer>
+						</form>
+					</Dialog.Content>
+				</Dialog.Root>
+
+				<Dialog.Root>
+					<Dialog.Trigger>
+						{#snippet child({ props })}
+							<Button {...props} variant="outline" size="sm">
+								<PenLine />
+								{t('Rename')}
+							</Button>
+						{/snippet}
+					</Dialog.Trigger>
+					<Dialog.Content class="sm:max-w-md">
+						<Dialog.Header>
+							<Dialog.Title>{t('Rename key')}</Dialog.Title>
+							<Dialog.Description>{t('Moving the key keeps its value and TTL.')}</Dialog.Description
+							>
+						</Dialog.Header>
+						<form method="POST" action="?/rename" class="flex flex-col gap-4">
+							<div class="flex flex-col gap-2">
+								<Label for="rename-name">{t('New name')}</Label>
+								<Input
+									id="rename-name"
+									name="name"
+									required
+									maxlength={5120}
+									value={data.key}
+									class="font-mono"
+								/>
+							</div>
+							<Dialog.Footer>
+								<Button type="submit" size="sm">{t('Rename')}</Button>
+							</Dialog.Footer>
+						</form>
+					</Dialog.Content>
+				</Dialog.Root>
+
+				<form method="POST" action="?/delete" id="key-delete-form">
+					<AlertDialog.Root>
+						<AlertDialog.Trigger>
+							{#snippet child({ props })}
+								<Button {...props} variant="destructive" size="sm">
+									<Trash2 />
+									{t('Delete')}
+								</Button>
+							{/snippet}
+						</AlertDialog.Trigger>
+						<AlertDialog.Content>
+							<AlertDialog.Header>
+								<AlertDialog.Title>{t('Delete “{key}”?', { key: data.key })}</AlertDialog.Title>
+								<AlertDialog.Description>
+									{t('The {type} key and its value are removed. This cannot be undone.', {
+										type: data.type
+									})}
+								</AlertDialog.Description>
+							</AlertDialog.Header>
+							<AlertDialog.Footer>
+								<AlertDialog.Cancel>{t('Cancel')}</AlertDialog.Cancel>
+								<AlertDialog.Action variant="destructive" type="submit" form="key-delete-form">
+									{t('Delete key')}
+								</AlertDialog.Action>
+							</AlertDialog.Footer>
+						</AlertDialog.Content>
+					</AlertDialog.Root>
+				</form>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
@@ -231,6 +234,7 @@
 							value={rawText}
 							rows={12}
 							class="font-mono"
+							disabled={!data.canWrite}
 						/>
 					</form>
 					{#if data.json}
@@ -243,7 +247,9 @@
 						<Button variant="ghost" size="sm" onclick={rawAgain} disabled={!data.json}>
 							{t('Raw')}
 						</Button>
-						<Button type="submit" form="save-string-form" size="sm">{t('Save')}</Button>
+						{#if data.canWrite}
+							<Button type="submit" form="save-string-form" size="sm">{t('Save')}</Button>
+						{/if}
 					</div>
 				{:else}
 					<Alert variant="warning">
@@ -276,7 +282,9 @@
 							<Table.Row>
 								<Table.Head class="w-2/5">{t('Field')}</Table.Head>
 								<Table.Head>{t('Value')}</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{#if data.canWrite}
+									<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{/if}
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -289,34 +297,40 @@
 									</Table.Cell>
 									<Table.Cell class="w-3/5">
 										{#if entry.value.kind === 'text'}
-											<form method="POST" action="?/hset" class="flex items-center gap-2">
-												<input type="hidden" name="field" value={fieldText} />
-												{@render offsetFields()}
-												<Input
-													name="value"
-													value={entry.value.text}
-													class="min-w-0 flex-1 font-mono"
-												/>
-												<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
-											</form>
+											{#if data.canWrite}
+												<form method="POST" action="?/hset" class="flex items-center gap-2">
+													<input type="hidden" name="field" value={fieldText} />
+													{@render offsetFields()}
+													<Input
+														name="value"
+														value={entry.value.text}
+														class="min-w-0 flex-1 font-mono"
+													/>
+													<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
+												</form>
+											{:else}
+												<span class="font-mono break-all">{entry.value.text}</span>
+											{/if}
 										{:else}
 											{@render binary(entry.value.base64)}
 										{/if}
 									</Table.Cell>
-									<Table.Cell class="text-end">
-										<form method="POST" action="?/hdel">
-											<input type="hidden" name="field" value={fieldText} />
-											{@render offsetFields()}
-											<Button
-												type="submit"
-												variant="ghost"
-												size="icon-sm"
-												aria-label={t('Delete field {field}', { field: fieldText })}
-											>
-												<Trash2 />
-											</Button>
-										</form>
-									</Table.Cell>
+									{#if data.canWrite}
+										<Table.Cell class="text-end">
+											<form method="POST" action="?/hdel">
+												<input type="hidden" name="field" value={fieldText} />
+												{@render offsetFields()}
+												<Button
+													type="submit"
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t('Delete field {field}', { field: fieldText })}
+												>
+													<Trash2 />
+												</Button>
+											</form>
+										</Table.Cell>
+									{/if}
 								</Table.Row>
 							{/each}
 						</Table.Body>
@@ -324,26 +338,28 @@
 				{/if}
 			</Card.Content>
 			<Card.Footer class="border-t p-5">
-				<form method="POST" action="?/hset" class="flex flex-wrap items-center gap-2">
-					{@render offsetFields()}
-					<Input
-						name="field"
-						required
-						placeholder={t('field')}
-						aria-label={t('New field name')}
-						class="w-48 font-mono"
-					/>
-					<Input
-						name="value"
-						placeholder={t('value')}
-						aria-label={t('New field value')}
-						class="min-w-48 flex-1 font-mono"
-					/>
-					<Button type="submit" variant="outline" size="sm">
-						<Plus />
-						Add field
-					</Button>
-				</form>
+				{#if data.canWrite}
+					<form method="POST" action="?/hset" class="flex flex-wrap items-center gap-2">
+						{@render offsetFields()}
+						<Input
+							name="field"
+							required
+							placeholder={t('field')}
+							aria-label={t('New field name')}
+							class="w-48 font-mono"
+						/>
+						<Input
+							name="value"
+							placeholder={t('value')}
+							aria-label={t('New field value')}
+							class="min-w-48 flex-1 font-mono"
+						/>
+						<Button type="submit" variant="outline" size="sm">
+							<Plus />
+							Add field
+						</Button>
+					</form>
+				{/if}
 			</Card.Footer>
 		</Card.Root>
 	{:else if data.value.type === 'list'}
@@ -371,7 +387,9 @@
 							<Table.Row>
 								<Table.Head class="w-16 text-end">{t('Index')}</Table.Head>
 								<Table.Head>Value</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{#if data.canWrite}
+									<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{/if}
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -380,34 +398,40 @@
 									<Table.Cell class="text-end tabular-nums">{entry.index}</Table.Cell>
 									<Table.Cell>
 										{#if entry.value.kind === 'text'}
-											<form method="POST" action="?/lset" class="flex items-center gap-2">
-												<input type="hidden" name="index" value={entry.index} />
-												{@render offsetFields()}
-												<Input
-													name="value"
-													value={entry.value.text}
-													class="min-w-0 flex-1 font-mono"
-												/>
-												<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
-											</form>
+											{#if data.canWrite}
+												<form method="POST" action="?/lset" class="flex items-center gap-2">
+													<input type="hidden" name="index" value={entry.index} />
+													{@render offsetFields()}
+													<Input
+														name="value"
+														value={entry.value.text}
+														class="min-w-0 flex-1 font-mono"
+													/>
+													<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
+												</form>
+											{:else}
+												<span class="font-mono break-all">{entry.value.text}</span>
+											{/if}
 										{:else}
 											{@render binary(entry.value.base64)}
 										{/if}
 									</Table.Cell>
-									<Table.Cell class="text-end">
-										<form method="POST" action="?/ldel">
-											<input type="hidden" name="index" value={entry.index} />
-											{@render offsetFields()}
-											<Button
-												type="submit"
-												variant="ghost"
-												size="icon-sm"
-												aria-label={t('Delete element {index}', { index: entry.index })}
-											>
-												<Trash2 />
-											</Button>
-										</form>
-									</Table.Cell>
+									{#if data.canWrite}
+										<Table.Cell class="text-end">
+											<form method="POST" action="?/ldel">
+												<input type="hidden" name="index" value={entry.index} />
+												{@render offsetFields()}
+												<Button
+													type="submit"
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t('Delete element {index}', { index: entry.index })}
+												>
+													<Trash2 />
+												</Button>
+											</form>
+										</Table.Cell>
+									{/if}
 								</Table.Row>
 							{/each}
 						</Table.Body>
@@ -415,20 +439,22 @@
 				{/if}
 			</Card.Content>
 			<Card.Footer class="border-t p-5">
-				<form method="POST" action="?/lpush" class="flex flex-wrap items-center gap-2">
-					{@render offsetFields()}
-					<Input
-						name="value"
-						required
-						placeholder={t('value')}
-						aria-label={t('New last element')}
-						class="min-w-48 flex-1 font-mono"
-					/>
-					<Button type="submit" variant="outline" size="sm">
-						<Plus />
-						{t('Push tail')}
-					</Button>
-				</form>
+				{#if data.canWrite}
+					<form method="POST" action="?/lpush" class="flex flex-wrap items-center gap-2">
+						{@render offsetFields()}
+						<Input
+							name="value"
+							required
+							placeholder={t('value')}
+							aria-label={t('New last element')}
+							class="min-w-48 flex-1 font-mono"
+						/>
+						<Button type="submit" variant="outline" size="sm">
+							<Plus />
+							{t('Push tail')}
+						</Button>
+					</form>
+				{/if}
 			</Card.Footer>
 		</Card.Root>
 	{:else if data.value.type === 'set'}
@@ -458,8 +484,8 @@
 										{memberText}
 										{#if member.kind === 'binary'}{@render binary(member.base64)}{/if}
 									</Table.Cell>
-									<Table.Cell class="text-end">
-										{#if member.kind === 'text'}
+									{#if data.canWrite && member.kind === 'text'}
+										<Table.Cell class="text-end">
 											<form method="POST" action="?/srem">
 												<input type="hidden" name="member" value={memberText} />
 												{@render offsetFields()}
@@ -472,8 +498,8 @@
 													<Trash2 />
 												</Button>
 											</form>
-										{/if}
-									</Table.Cell>
+										</Table.Cell>
+									{/if}
 								</Table.Row>
 							{/each}
 						</Table.Body>
@@ -481,20 +507,22 @@
 				{/if}
 			</Card.Content>
 			<Card.Footer class="border-t p-5">
-				<form method="POST" action="?/sadd" class="flex flex-wrap items-center gap-2">
-					{@render offsetFields()}
-					<Input
-						name="member"
-						required
-						placeholder={t('member')}
-						aria-label={t('New member')}
-						class="min-w-48 flex-1 font-mono"
-					/>
-					<Button type="submit" variant="outline" size="sm">
-						<Plus />
-						{t('Add member')}
-					</Button>
-				</form>
+				{#if data.canWrite}
+					<form method="POST" action="?/sadd" class="flex flex-wrap items-center gap-2">
+						{@render offsetFields()}
+						<Input
+							name="member"
+							required
+							placeholder={t('member')}
+							aria-label={t('New member')}
+							class="min-w-48 flex-1 font-mono"
+						/>
+						<Button type="submit" variant="outline" size="sm">
+							<Plus />
+							{t('Add member')}
+						</Button>
+					</form>
+				{/if}
 			</Card.Footer>
 		</Card.Root>
 	{:else if data.value.type === 'zset'}
@@ -516,7 +544,9 @@
 							<Table.Row>
 								<Table.Head>{t('Member')}</Table.Head>
 								<Table.Head class="w-32">{t('Score')}</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{#if data.canWrite}
+									<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{/if}
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -529,39 +559,45 @@
 									</Table.Cell>
 									<Table.Cell>
 										{#if entry.member.kind === 'text'}
-											<form method="POST" action="?/zadd" class="flex items-center gap-2">
-												<input type="hidden" name="member" value={memberText} />
-												{@render offsetFields()}
-												<Input
-													name="score"
-													type="number"
-													step="any"
-													value={entry.score}
-													aria-label={t('Score of {member}', { member: memberText })}
-													class="w-24"
-												/>
-												<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
-											</form>
+											{#if data.canWrite}
+												<form method="POST" action="?/zadd" class="flex items-center gap-2">
+													<input type="hidden" name="member" value={memberText} />
+													{@render offsetFields()}
+													<Input
+														name="score"
+														type="number"
+														step="any"
+														value={entry.score}
+														aria-label={t('Score of {member}', { member: memberText })}
+														class="w-24"
+													/>
+													<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
+												</form>
+											{:else}
+												<span class="tabular-nums">{entry.score}</span>
+											{/if}
 										{:else}
 											<span class="tabular-nums">{entry.score}</span>
 										{/if}
 									</Table.Cell>
-									<Table.Cell class="text-end">
-										{#if entry.member.kind === 'text'}
-											<form method="POST" action="?/zrem">
-												<input type="hidden" name="member" value={memberText} />
-												{@render offsetFields()}
-												<Button
-													type="submit"
-													variant="ghost"
-													size="icon-sm"
-													aria-label={t('Remove member {member}', { member: memberText })}
-												>
-													<Trash2 />
-												</Button>
-											</form>
-										{/if}
-									</Table.Cell>
+									{#if data.canWrite}
+										<Table.Cell class="text-end">
+											{#if entry.member.kind === 'text'}
+												<form method="POST" action="?/zrem">
+													<input type="hidden" name="member" value={memberText} />
+													{@render offsetFields()}
+													<Button
+														type="submit"
+														variant="ghost"
+														size="icon-sm"
+														aria-label={t('Remove member {member}', { member: memberText })}
+													>
+														<Trash2 />
+													</Button>
+												</form>
+											{/if}
+										</Table.Cell>
+									{/if}
 								</Table.Row>
 							{/each}
 						</Table.Body>
@@ -569,29 +605,31 @@
 				{/if}
 			</Card.Content>
 			<Card.Footer class="border-t p-5">
-				<form method="POST" action="?/zadd" class="flex flex-wrap items-center gap-2">
-					{@render offsetFields()}
-					<Input
-						name="member"
-						required
-						placeholder={t('member')}
-						aria-label={t('New member')}
-						class="w-48 font-mono"
-					/>
-					<Input
-						name="score"
-						type="number"
-						step="any"
-						required
-						placeholder={t('score')}
-						aria-label={t('New member score')}
-						class="w-24"
-					/>
-					<Button type="submit" variant="outline" size="sm">
-						<Plus />
-						Add
-					</Button>
-				</form>
+				{#if data.canWrite}
+					<form method="POST" action="?/zadd" class="flex flex-wrap items-center gap-2">
+						{@render offsetFields()}
+						<Input
+							name="member"
+							required
+							placeholder={t('member')}
+							aria-label={t('New member')}
+							class="w-48 font-mono"
+						/>
+						<Input
+							name="score"
+							type="number"
+							step="any"
+							required
+							placeholder={t('score')}
+							aria-label={t('New member score')}
+							class="w-24"
+						/>
+						<Button type="submit" variant="outline" size="sm">
+							<Plus />
+							Add
+						</Button>
+					</form>
+				{/if}
 			</Card.Footer>
 		</Card.Root>
 	{:else if data.value.type === 'stream'}
@@ -611,7 +649,9 @@
 							<Table.Row>
 								<Table.Head class="w-48">{t('ID')}</Table.Head>
 								<Table.Head>{t('Fields')}</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{#if data.canWrite}
+									<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
+								{/if}
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -633,20 +673,22 @@
 											{/each}
 										</div>
 									</Table.Cell>
-									<Table.Cell class="text-end">
-										<form method="POST" action="?/xdel">
-											<input type="hidden" name="id" value={entry.id} />
-											{@render offsetFields()}
-											<Button
-												type="submit"
-												variant="ghost"
-												size="icon-sm"
-												aria-label={t('Delete entry {id}', { id: entry.id })}
-											>
-												<Trash2 />
-											</Button>
-										</form>
-									</Table.Cell>
+									{#if data.canWrite}
+										<Table.Cell class="text-end">
+											<form method="POST" action="?/xdel">
+												<input type="hidden" name="id" value={entry.id} />
+												{@render offsetFields()}
+												<Button
+													type="submit"
+													variant="ghost"
+													size="icon-sm"
+													aria-label={t('Delete entry {id}', { id: entry.id })}
+												>
+													<Trash2 />
+												</Button>
+											</form>
+										</Table.Cell>
+									{/if}
 								</Table.Row>
 							{/each}
 						</Table.Body>
@@ -654,26 +696,28 @@
 				{/if}
 			</Card.Content>
 			<Card.Footer class="border-t p-5">
-				<form method="POST" action="?/xadd" class="flex flex-wrap items-center gap-2">
-					{@render offsetFields()}
-					<Input
-						name="name"
-						required
-						placeholder={t('field name')}
-						aria-label={t('New entry field name')}
-						class="w-48 font-mono"
-					/>
-					<Input
-						name="value"
-						placeholder={t('value')}
-						aria-label={t('New entry field value')}
-						class="min-w-48 flex-1 font-mono"
-					/>
-					<Button type="submit" variant="outline" size="sm">
-						<Plus />
-						{t('Add entry')}
-					</Button>
-				</form>
+				{#if data.canWrite}
+					<form method="POST" action="?/xadd" class="flex flex-wrap items-center gap-2">
+						{@render offsetFields()}
+						<Input
+							name="name"
+							required
+							placeholder={t('field name')}
+							aria-label={t('New entry field name')}
+							class="w-48 font-mono"
+						/>
+						<Input
+							name="value"
+							placeholder={t('value')}
+							aria-label={t('New entry field value')}
+							class="min-w-48 flex-1 font-mono"
+						/>
+						<Button type="submit" variant="outline" size="sm">
+							<Plus />
+							{t('Add entry')}
+						</Button>
+					</form>
+				{/if}
 			</Card.Footer>
 		</Card.Root>
 	{/if}

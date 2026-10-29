@@ -76,7 +76,7 @@ makes sense, with a modern UI and a maintainable test suite.
   identity layer (SSO at the ingress), each user allowed to see only the servers/nodes they have
   access to.
 
-  ### 5a — App roles + per-user server visibility (app-side, ships first)
+  ### 5a — App roles + per-user server visibility (app-side) ✅ DONE
   - **Config** (BC-compatible additions, zod-validated):
     ```jsonc
     "login": [
@@ -102,7 +102,7 @@ makes sense, with a modern UI and a maintainable test suite.
   - **Login page**: optional server selector when the user's first server is ambiguous (phpRedisAdmin
     style) — deferred if `servers` defaults to "all" in practice.
 
-  ### 5b — Pluggable authentication (delegation / extensions)
+  ### 5b — Pluggable authentication (delegation / extensions) ✅ DONE (config | http | header)
   - **Plugin interface** (`src/lib/server/auth/plugins/`):
     ```ts
     export interface AuthPlugin {

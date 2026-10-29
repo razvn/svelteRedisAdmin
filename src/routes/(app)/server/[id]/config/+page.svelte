@@ -61,7 +61,7 @@
 		</Alert>
 	{/if}
 
-	{#if editing}
+	{#if editing && data.canAdmin}
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{t('Set parameter')}</Card.Title>
@@ -118,14 +118,16 @@
 							<Table.Cell class="font-mono">{parameter}</Table.Cell>
 							<Table.Cell class="font-mono break-all whitespace-normal">{value}</Table.Cell>
 							<Table.Cell class="text-end">
-								<Button
-									variant="outline"
-									size="xs"
-									href="{basePath}?edit={encodeURIComponent(parameter)}"
-								>
-									<Pencil />
-									{t('Edit')}
-								</Button>
+								{#if data.canAdmin}
+									<Button
+										variant="outline"
+										size="xs"
+										href="{basePath}?edit={encodeURIComponent(parameter)}"
+									>
+										<Pencil />
+										{t('Edit')}
+									</Button>
+								{/if}
 							</Table.Cell>
 						</Table.Row>
 					{:else}

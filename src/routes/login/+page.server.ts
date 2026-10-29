@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { createSessionToken } from '#lib/server/auth/session.ts';
+import { resolveServers } from '#lib/server/auth/access.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 const loginSchema = z.object({
@@ -37,7 +38,15 @@ export const actions: Actions = {
 		const expires = Math.floor(Date.now() / 1000) + locals.config.cookieLifetime;
 		cookies.set(
 			locals.config.cookieName,
-			createSessionToken({ username: match.username, expires }, locals.config.cookieSecret ?? ''),
+			createSessionToken(
+				{
+					username: match.username,
+					role: match.role,
+					servers: resolveServers(locals.config, match.servers ?? null),
+					expires
+				},
+				locals.config.cookieSecret ?? ''
+			),
 			{
 				path: '/',
 				httpOnly: true,

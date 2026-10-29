@@ -54,72 +54,79 @@
 		icon={Plus}
 	/>
 
-	<Card.Root class="max-w-3xl">
-		<Card.Content class="flex flex-col gap-5">
-			{#if form && 'error' in form && form.error}
-				<Alert variant="destructive">
-					<CircleAlert />
-					<AlertDescription>{form.error}</AlertDescription>
-				</Alert>
-			{/if}
+	{#if !data.canWrite}
+		<Alert variant="warning">
+			<CircleAlert />
+			<AlertDescription>{t('You are not allowed to modify data.')}</AlertDescription>
+		</Alert>
+	{:else}
+		<Card.Root class="max-w-3xl">
+			<Card.Content class="flex flex-col gap-5">
+				{#if form && 'error' in form && form.error}
+					<Alert variant="destructive">
+						<CircleAlert />
+						<AlertDescription>{form.error}</AlertDescription>
+					</Alert>
+				{/if}
 
-			<form method="POST" action="?/create" class="flex flex-col gap-5">
-				<div class="flex flex-col gap-2">
-					<Label for="new-key-name">{t('Key name')}</Label>
-					<Input
-						id="new-key-name"
-						name="key"
-						required
-						maxlength={5120}
-						value={form && 'key' in form ? form.key : ''}
-						placeholder="e.g. app:session:123"
-						class="font-mono"
-					/>
-				</div>
+				<form method="POST" action="?/create" class="flex flex-col gap-5">
+					<div class="flex flex-col gap-2">
+						<Label for="new-key-name">{t('Key name')}</Label>
+						<Input
+							id="new-key-name"
+							name="key"
+							required
+							maxlength={5120}
+							value={form && 'key' in form ? form.key : ''}
+							placeholder="e.g. app:session:123"
+							class="font-mono"
+						/>
+					</div>
 
-				<div class="flex flex-col gap-2">
-					<Label for="new-key-type">{t('Type')}</Label>
-					<NativeSelect id="new-key-type" name="type" bind:value={type}>
-						{#each KEY_TYPES as option (option)}
-							<option value={option}>{option}</option>
-						{/each}
-					</NativeSelect>
-				</div>
+					<div class="flex flex-col gap-2">
+						<Label for="new-key-type">{t('Type')}</Label>
+						<NativeSelect id="new-key-type" name="type" bind:value={type}>
+							{#each KEY_TYPES as option (option)}
+								<option value={option}>{option}</option>
+							{/each}
+						</NativeSelect>
+					</div>
 
-				<div class="flex flex-col gap-2">
-					<Label for="new-key-value">{t('Initial value')}</Label>
-					<p class="text-sm text-muted-foreground">
-						{VALUE_HINTS[type] === undefined ? '' : t(VALUE_HINTS[type])}
-					</p>
-					<Textarea
-						id="new-key-value"
-						name="value"
-						rows={8}
-						value={form && 'value' in form ? form.value : ''}
-						class="font-mono"
-					/>
-				</div>
+					<div class="flex flex-col gap-2">
+						<Label for="new-key-value">{t('Initial value')}</Label>
+						<p class="text-sm text-muted-foreground">
+							{VALUE_HINTS[type] === undefined ? '' : t(VALUE_HINTS[type])}
+						</p>
+						<Textarea
+							id="new-key-value"
+							name="value"
+							rows={8}
+							value={form && 'value' in form ? form.value : ''}
+							class="font-mono"
+						/>
+					</div>
 
-				<div class="flex flex-col gap-2">
-					<Label for="new-key-ttl">{t('TTL (seconds, optional)')}</Label>
-					<Input
-						id="new-key-ttl"
-						name="ttl"
-						type="number"
-						min={0}
-						placeholder={t('no expiry')}
-						class="w-40"
-					/>
-				</div>
+					<div class="flex flex-col gap-2">
+						<Label for="new-key-ttl">{t('TTL (seconds, optional)')}</Label>
+						<Input
+							id="new-key-ttl"
+							name="ttl"
+							type="number"
+							min={0}
+							placeholder={t('no expiry')}
+							class="w-40"
+						/>
+					</div>
 
-				<div class="flex items-center gap-2">
-					<Button type="submit">
-						<Plus />
-						{t('Create key')}
-					</Button>
-					<Button variant="ghost" href={dbHref(data.serverIndex, data.db)}>{t('Cancel')}</Button>
-				</div>
-			</form>
-		</Card.Content>
-	</Card.Root>
+					<div class="flex items-center gap-2">
+						<Button type="submit">
+							<Plus />
+							{t('Create key')}
+						</Button>
+						<Button variant="ghost" href={dbHref(data.serverIndex, data.db)}>{t('Cancel')}</Button>
+					</div>
+				</form>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 </div>

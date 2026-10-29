@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
+import { assertWrite, canWrite } from '#lib/server/auth/access.ts';
 import { killClient, listClients } from '#lib/server/redis/server.ts';
 import { serverName } from '#lib/server/config/schema.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -18,7 +19,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		serverIndex: locals.serverIndex ?? 0,
 		serverLabel: serverName(locals.server),
-		clients: rows
+		clients: rows,
+		canWrite: canWrite(locals.session)
 	};
 };
 
@@ -26,6 +28,7 @@ export const actions: Actions = {
 	kill: async ({ request, locals }) => {
 		const t = locals.i18n.t;
 		if (!locals.server) error(404, t('Server not found'));
+		assertWrite(locals);
 
 		const raw = await request.formData();
 		const parsed = killSchema.safeParse({ id: raw.get('id') });

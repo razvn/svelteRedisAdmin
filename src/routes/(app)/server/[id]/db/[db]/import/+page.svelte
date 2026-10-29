@@ -89,35 +89,42 @@
 				{/if}
 			{/if}
 
-			<form
-				method="POST"
-				action="?/import"
-				enctype="multipart/form-data"
-				class="flex flex-col gap-5"
-			>
-				<div class="flex flex-col gap-2">
-					<Label for="import-file">{t('JSON dump')}</Label>
-					<Input
-						id="import-file"
-						type="file"
-						name="file"
-						accept="application/json,.json"
-						required
-					/>
-				</div>
-				<p class="text-sm text-muted-foreground">
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted catalog string, no user data -->
-					{@html i18n.t(
-						'Upload a file produced by the Export tab: <code class="font-mono">{"keys": [{"key": ..., "type": ..., "ttl": ..., "value": ...}]}</code>. Existing keys with the same name are overwritten.'
-					)}
-				</p>
-				<div>
-					<Button type="submit">
-						<Upload />
-						{t('Import keys')}
-					</Button>
-				</div>
-			</form>
+			{#if data.canWrite}
+				<form
+					method="POST"
+					action="?/import"
+					enctype="multipart/form-data"
+					class="flex flex-col gap-5"
+				>
+					<div class="flex flex-col gap-2">
+						<Label for="import-file">{t('JSON dump')}</Label>
+						<Input
+							id="import-file"
+							type="file"
+							name="file"
+							accept="application/json,.json"
+							required
+						/>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted catalog string, no user data -->
+						{@html i18n.t(
+							'Upload a file produced by the Export tab: <code class="font-mono">{"keys": [{"key": ..., "type": ..., "ttl": ..., "value": ...}]}</code>. Existing keys with the same name are overwritten.'
+						)}
+					</p>
+					<div>
+						<Button type="submit">
+							<Upload />
+							{t('Import keys')}
+						</Button>
+					</div>
+				</form>
+			{:else}
+				<Alert variant="warning">
+					<CircleAlert />
+					<AlertDescription>{t('You are not allowed to modify data.')}</AlertDescription>
+				</Alert>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 </div>

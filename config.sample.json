@@ -1,5 +1,5 @@
 {
-	"$comment": "Copy to config.json (git-ignored) or point SRA_CONFIG at it. Key names follow phpRedisAdmin's config.",
+	"$comment": "Copy to config.json (git-ignored) or point SRA_CONFIG at it. Key names follow phpRedisAdmin's config. auth.plugin: 'config' (login form, default), 'http' (HTTP Basic against the login list) or 'header' (trust config.auth.header, e.g. 'x-forwarded-user', set by your ingress).",
 	"Servers": [
 		{
 			"name": "Dev redis1",
@@ -22,7 +22,12 @@
 			"separator": ":"
 		}
 	],
-	"login": [{ "username": "admin", "password": "admin" }],
+	"login": [
+		{ "username": "admin", "password": "admin", "role": "admin" },
+		{ "username": "dev", "password": "dev", "role": "rw", "servers": [0, 1] },
+		{ "username": "viewer", "password": "viewer", "role": "ro" }
+	],
+	"auth": { "plugin": "config" },
 	"cookieSecret": "dev-secret-change-me",
 	"cookieName": "sra_session",
 	"maxKeyListSize": 100,

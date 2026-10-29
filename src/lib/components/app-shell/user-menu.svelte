@@ -2,15 +2,21 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+	import { Badge } from '#lib/components/ui/badge/index.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 
 	interface Props {
 		user: string;
+		role: 'admin' | 'rw' | 'ro';
 		host: string;
 		serverLabel: string;
 		canLogout: boolean;
 	}
 
-	let { user, host, serverLabel, canLogout }: Props = $props();
+	let { user, role, host, serverLabel, canLogout }: Props = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 
 	const initials = $derived(user.slice(0, 2).toUpperCase() || '?');
 </script>
@@ -42,7 +48,12 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end" class="w-64">
 		<DropdownMenu.Label class="flex flex-col gap-0.5 font-normal">
-			<span class="truncate text-sm font-semibold">{user}</span>
+			<span class="flex items-center gap-2">
+				<span class="truncate text-sm font-semibold">{user}</span>
+				{#if role === 'ro'}
+					<Badge variant="muted" class="ms-auto">{t('Read-only')}</Badge>
+				{/if}
+			</span>
 			<span class="truncate text-xs text-muted-foreground">{user}@{host}</span>
 			<span class="truncate text-xs text-muted-foreground">{serverLabel}</span>
 		</DropdownMenu.Label>

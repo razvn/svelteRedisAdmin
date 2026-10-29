@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
+import { assertWrite, canWrite } from '#lib/server/auth/access.ts';
 import { deleteKeys, scanPage, type KeyType } from '#lib/server/redis/keys.ts';
 import { flush } from '#lib/server/redis/server.ts';
 import { serverName } from '#lib/server/config/schema.ts';
@@ -50,7 +51,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		filter: query.filter,
 		type: query.type,
 		view: query.view,
-		separator: locals.server.separator
+		separator: locals.server.separator,
+		canWrite: canWrite(locals.session)
 	};
 };
 
@@ -58,6 +60,7 @@ export const actions: Actions = {
 	delete: async ({ request, locals, params }) => {
 		const t = locals.i18n.t;
 		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
+		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
 		const parsed = selectedKeysSchema.safeParse(raw.getAll('keys').map(String));
@@ -81,6 +84,7 @@ export const actions: Actions = {
 	flush: async ({ request, locals, params }) => {
 		if (!locals.server || locals.serverIndex === null)
 			error(404, locals.i18n.t('Server not found'));
+		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
 		const client = await locals.redis(db);

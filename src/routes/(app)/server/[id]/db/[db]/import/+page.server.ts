@@ -1,4 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
+import { assertWrite, canWrite } from '#lib/server/auth/access.ts';
 import { serverName } from '#lib/server/config/schema.ts';
 import { resolveDb } from '#lib/server/routing.ts';
 import { importDump, importDumpSchema } from '#lib/server/redis/dump.ts';
@@ -13,7 +14,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	return {
 		serverIndex: locals.serverIndex,
 		db,
-		label: serverName(locals.server)
+		label: serverName(locals.server),
+		canWrite: canWrite(locals.session)
 	};
 };
 
@@ -21,6 +23,7 @@ export const actions: Actions = {
 	import: async ({ request, locals, params }) => {
 		const t = locals.i18n.t;
 		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
+		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 
 		const raw = await request.formData();

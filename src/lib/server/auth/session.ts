@@ -1,8 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { ROLES, type Role } from './access.ts';
 
 /** Non-secret facts stored in the session cookie. */
 export interface SessionInfo {
 	username: string;
+	/** App role (`ro` sessions cannot write, `rw` cannot administer). */
+	role: Role;
+	/** Server indexes the user may see; `null` = every configured server. */
+	servers: number[] | null;
 	/** Unix seconds when the session expires. */
 	expires: number;
 }
@@ -44,6 +49,13 @@ export function parseSessionToken(token: string | undefined, secret: string): Se
 	try {
 		const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as SessionInfo;
 		if (typeof session.username !== 'string' || typeof session.expires !== 'number') return null;
+		if (typeof session.role !== 'string' || !ROLES.includes(session.role)) return null;
+		if (
+			session.servers !== null &&
+			(!Array.isArray(session.servers) || session.servers.some((index) => !Number.isInteger(index)))
+		) {
+			return null;
+		}
 		if (session.expires <= Date.now() / 1000) return null;
 		return session;
 	} catch {

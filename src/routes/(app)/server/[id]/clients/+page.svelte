@@ -56,7 +56,9 @@
 						<Table.Head class="text-end">{t('Sub / Psub')}</Table.Head>
 						<Table.Head>{t('Cmd')}</Table.Head>
 						<Table.Head>{t('User')}</Table.Head>
-						<Table.Head class="w-20"><span class="sr-only">{t('Actions')}</span></Table.Head>
+						{#if data.canWrite}
+							<Table.Head class="w-20"><span class="sr-only">{t('Actions')}</span></Table.Head>
+						{/if}
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -76,12 +78,14 @@
 							</Table.Cell>
 							<Table.Cell class="font-mono uppercase">{client['cmd']}</Table.Cell>
 							<Table.Cell>{client['user']}</Table.Cell>
-							<Table.Cell class="text-end">
-								<form method="POST" action="?/kill">
-									<input type="hidden" name="id" value={client['id']} />
-									<Button type="submit" variant="destructive" size="xs">{t('Kill')}</Button>
-								</form>
-							</Table.Cell>
+							{#if data.canWrite}
+								<Table.Cell class="text-end">
+									<form method="POST" action="?/kill">
+										<input type="hidden" name="id" value={client['id']} />
+										<Button type="submit" variant="destructive" size="xs">{t('Kill')}</Button>
+									</form>
+								</Table.Cell>
+							{/if}
 						</Table.Row>
 					{:else}
 						<Table.Row>

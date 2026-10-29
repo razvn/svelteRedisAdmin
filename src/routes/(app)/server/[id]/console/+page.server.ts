@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
+import { assertWrite, canWrite } from '#lib/server/auth/access.ts';
 import { formatTokens, runCommands, type ConsoleResult } from '#lib/server/redis/console.ts';
 import { getServerInfo, infoValue } from '#lib/server/redis/server.ts';
 import { serverName } from '#lib/server/config/schema.ts';
@@ -23,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		redisVersion = null;
 	}
 
-	return { serverIndex, serverLabel, db, redisVersion };
+	return { serverIndex, serverLabel, db, redisVersion, canWrite: canWrite(locals.session) };
 };
 
 export interface ConsoleResultView extends ConsoleResult {
@@ -35,6 +36,7 @@ export const actions: Actions = {
 	run: async ({ request, locals }) => {
 		const t = locals.i18n.t;
 		if (!locals.server) error(404, t('Server not found'));
+		assertWrite(locals);
 
 		const raw = await request.formData();
 		const parsed = runSchema.safeParse({ input: raw.get('input') });
