@@ -1,5 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Languages from '@lucide/svelte/icons/languages';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import { languageLabel, useI18n } from '#lib/i18n/index.ts';
+	import { setLanguage } from '#lib/i18n/switch.ts';
+	import Check from '@lucide/svelte/icons/check';
 	import Search from '@lucide/svelte/icons/search';
 	import ThemeToggle from '#lib/components/theme-toggle.svelte';
 	import * as Sidebar from '#lib/components/ui/sidebar/index.ts';
@@ -19,6 +25,8 @@
 	}
 
 	let { session, servers, onsearch }: Props = $props();
+
+	const i18n = useI18n();
 
 	let shortcut = $state('Ctrl K');
 	onMount(() => {
@@ -54,6 +62,35 @@
 			{#if servers.length > 1}
 				<ServerSwitcher {servers} current={session.serverIndex} />
 			{/if}
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							variant="ghost"
+							size="icon"
+							class="rounded-full"
+							aria-label="Change language"
+							title={languageLabel(i18n.language)}
+						>
+							<Languages />
+						</Button>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Label>Language</DropdownMenu.Label>
+					{#each i18n.languages as l (l.code)}
+						<DropdownMenu.Item
+							onclick={() => setLanguage(l.code)}
+							aria-checked={l.code === i18n.locale}
+							role="menuitemradio"
+						>
+							{languageLabel(l)}
+							{#if l.code === i18n.locale}<Check class="ms-auto size-4 text-primary" />{/if}
+						</DropdownMenu.Item>
+					{/each}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 			<ThemeToggle />
 			<UserMenu
 				user={session.user}

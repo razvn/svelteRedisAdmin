@@ -3,6 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { loadConfigOnce } from '#lib/server/config/loader.ts';
 import { parseSessionToken } from '#lib/server/auth/session.ts';
 import { createConnection } from '#lib/server/redis/connection.ts';
+import { applyLocale, fillHtmlLang } from '#lib/server/i18n/locale.ts';
 import type { AppConfig } from '#lib/server/config/schema.ts';
 import type { RedisConnection } from '#lib/server/redis/connection.ts';
 
@@ -23,6 +24,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		locals.config = undefined as never;
 		locals.configError = (error as Error).message;
 	}
+
+	// Interface language (cookie -> Accept-Language -> en).
+	await applyLocale(event);
 
 	locals.authRequired = !!config?.login?.length;
 	locals.session = config
@@ -60,7 +64,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	};
 
 	try {
-		return await resolve(event);
+		return await resolve(event, {
+			// Runs while rendering, after every guard has refined the response.
+			transformPageChunk: ({ html }) => fillHtmlLang(html, locals.locale)
+		});
 	} finally {
 		await Promise.allSettled([...opened.values()].map((promise) => promise.then((c) => c.quit())));
 	}

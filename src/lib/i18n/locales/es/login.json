@@ -1,0 +1,13 @@
+{
+	"Sign in": "Iniciar sesión",
+	"Signing in…": "Iniciando sesión…",
+	"Username": "Usuario",
+	"Password": "Contraseña",
+	"Wrong username or password.": "Usuario o contraseña incorrectos.",
+	"Invalid input": "Entrada no válida",
+	"Enter the username": "Introduzca el usuario",
+	"Enter the password": "Introduzca la contraseña",
+	"Credentials from the <code>config.json</code> <code>login</code> list.": "Credenciales de la lista <code>login</code> de <code>config.json</code>.",
+	"{n} server": ["{n} servidor", "{n} servidores"],
+	"{n} servers": "{n} servidores"
+}

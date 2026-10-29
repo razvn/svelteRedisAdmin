@@ -2,6 +2,7 @@
 import type { AppConfig, ServerConfig } from '#lib/server/config/schema.ts';
 import type { SessionInfo } from '#lib/server/auth/session.ts';
 import type { RedisConnection } from '#lib/server/redis/connection.ts';
+import type { Translator } from '#lib/i18n/translator.ts';
 
 declare global {
 	namespace App {
@@ -14,6 +15,10 @@ declare global {
 			session: SessionInfo | null;
 			/** True when `config.login` is configured (login page enforced). */
 			authRequired: boolean;
+			/** Resolved interface language of the request. */
+			locale: string;
+			/** Translator bound to `locale` (server-side `t()` in load functions). */
+			i18n: Translator;
 			/** 1-based… rather 0-based index of the active server in `config.Servers`; null outside server routes. */
 			serverIndex: number | null;
 			/** Active server definition; null outside server routes. */

@@ -8,12 +8,13 @@ const loginSchema = z.object({
 	password: z.string().min(1, 'Enter the password')
 });
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
 	return { username: '', error: null };
 };
 
 export const actions: Actions = {
 	default: async ({ request, locals, cookies }) => {
+		const t = locals.i18n.t;
 		const raw = await request.formData();
 		const parsed = loginSchema.safeParse({
 			username: raw.get('username'),
@@ -22,7 +23,7 @@ export const actions: Actions = {
 		if (!parsed.success) {
 			return fail(400, {
 				username: String(raw.get('username') ?? ''),
-				error: parsed.error.issues[0]?.message ?? 'Invalid input'
+				error: t(parsed.error.issues[0]?.message ?? 'Invalid input')
 			});
 		}
 

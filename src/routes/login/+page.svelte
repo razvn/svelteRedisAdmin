@@ -8,14 +8,18 @@
 	import * as Card from '#lib/components/ui/card/index.ts';
 	import { Input } from '#lib/components/ui/input/index.ts';
 	import { Label } from '#lib/components/ui/label/index.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
+
 	let submitting = $state(false);
 </script>
 
-<svelte:head><title>Sign in - svelteRedisAdmin</title></svelte:head>
+<svelte:head><title>{t('Sign in')} - svelteRedisAdmin</title></svelte:head>
 
 <main
 	class="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-4 text-foreground"
@@ -29,10 +33,11 @@
 
 	<Card.Root class="w-full max-w-sm gap-0 py-0">
 		<Card.Header class="border-b py-5">
-			<Card.Title>Sign in</Card.Title>
+			<Card.Title>{t('Sign in')}</Card.Title>
 			<Card.Description
-				>Credentials from the <code class="font-mono text-xs">config.json</code>
-				<code class="font-mono text-xs">login</code> list.</Card.Description
+				>{@html i18n.t(
+					'Credentials from the <code>config.json</code> <code>login</code> list.'
+				)}</Card.Description
 			>
 		</Card.Header>
 		<Card.Content class="p-5">
@@ -48,7 +53,7 @@
 					</Alert>
 				{/if}
 				<div class="flex flex-col gap-2">
-					<Label for="username">Username</Label>
+					<Label for="username">{t('Username')}</Label>
 					<Input
 						id="username"
 						name="username"
@@ -58,7 +63,7 @@
 					/>
 				</div>
 				<div class="flex flex-col gap-2">
-					<Label for="password">Password</Label>
+					<Label for="password">{t('Password')}</Label>
 					<Input
 						id="password"
 						name="password"
@@ -69,7 +74,7 @@
 				</div>
 				<Button type="submit" class="w-full" disabled={submitting}>
 					<Database />
-					{submitting ? 'Signing in…' : 'Sign in'}
+					{submitting ? t('Signing in…') : t('Sign in')}
 				</Button>
 			</form>
 		</Card.Content>
