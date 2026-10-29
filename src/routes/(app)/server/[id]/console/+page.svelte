@@ -12,10 +12,14 @@
 	import { Textarea } from '#lib/components/ui/textarea/index.ts';
 	import { SERVER_TABS, tabSubPath, type TabDef } from '#lib/nav/tabs.ts';
 	import { serverTabHref } from '#lib/nav/paths.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { WireReply } from '#lib/server/redis/console.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 
 	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
 
@@ -31,7 +35,7 @@
 		{#if node.text.length > 400}
 			<details>
 				<summary class="cursor-pointer text-sm text-muted-foreground">
-					Show {node.text.length} characters
+					{t('Show {n} characters', { n: node.text.length })}
 				</summary>
 				<code class="font-mono text-sm break-all whitespace-pre-wrap">{node.text}</code>
 			</details>
@@ -40,7 +44,7 @@
 		{/if}
 	{:else if node.kind === 'binary'}
 		<span class="inline-flex items-center gap-2">
-			<Badge variant="muted">binary</Badge>
+			<Badge variant="muted">{t('binary')}</Badge>
 			<code class="font-mono text-sm break-all">
 				{node.base64.slice(0, 80)}{node.base64.length > 80 ? '…' : ''}
 			</code>
@@ -71,25 +75,33 @@
 	{/if}
 {/snippet}
 
-<svelte:head><title>Console - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
+<svelte:head><title>{t('Console')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="console-page">
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
-	<TabBar label="Server" tabs={SERVER_TABS} current={tabSubPath('console')} {hrefFor} />
+	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('console')} {hrefFor} />
 	<PageHeader
-		title="Console"
-		description="Run Redis commands against db{data.db}. One command per line; quotes and # comments work like redis-cli."
+		title={t('Console')}
+		description={t(
+			'Run Redis commands against db{db}. One command per line; quotes and # comments work like redis-cli.',
+			{ db: data.db }
+		)}
 		icon={SquareTerminal}
 	/>
 
 	<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 		<StatCard
-			label="Redis version"
-			value={data.redisVersion ?? 'unknown'}
+			label={t('Redis version')}
+			value={data.redisVersion ?? t('unknown')}
 			icon={SquareTerminal}
 			tone="info"
 		/>
-		<StatCard label="Database" value="db{data.db}" icon={SquareTerminal} tone="primary" />
+		<StatCard
+			label={t('Database')}
+			value={t('db{db}', { db: data.db })}
+			icon={SquareTerminal}
+			tone="primary"
+		/>
 	</div>
 
 	{#if form?.error}
@@ -100,10 +112,12 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Command input</Card.Title>
-			<Card.Description>
-				One command per line. Empty lines and <code class="font-mono"># comments</code> are skipped.
-			</Card.Description>
+			<Card.Title>{t('Command input')}</Card.Title>
+			<Card.Description
+				>{@html i18n.t(
+					'One command per line. Empty lines and <code class="font-mono"># comments</code> are skipped.'
+				)}</Card.Description
+			>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			<form method="POST" action="?/run" class="flex flex-col gap-4">
@@ -117,14 +131,16 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<Button type="submit">
 						<SquareTerminal data-icon="inline-start" />
-						Run
+						{t('Run')}
 					</Button>
-					<Button type="button" variant="outline" onclick={() => (input = '')}>Clear</Button>
+					<Button type="button" variant="outline" onclick={() => (input = '')}>
+						{t('Clear')}
+					</Button>
 				</div>
 			</form>
 
 			<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-				Examples:
+				{t('Examples:')}
 				{#each EXAMPLES as example (example)}
 					<Button type="button" variant="outline" size="sm" onclick={() => (input = example)}>
 						<code class="font-mono text-xs">{example}</code>
@@ -147,7 +163,7 @@
 							{#if result.ok}
 								<Badge variant="muted">{result.durationMs.toFixed(1)} ms</Badge>
 							{:else}
-								<Badge variant="destructive">error</Badge>
+								<Badge variant="destructive">{t('error')}</Badge>
 							{/if}
 						</span>
 					</div>

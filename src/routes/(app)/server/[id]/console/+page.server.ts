@@ -10,7 +10,7 @@ const runSchema = z.object({
 });
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.server) error(404, 'Server not found');
+	if (!locals.server) error(404, locals.i18n.t('Server not found'));
 	const serverIndex = locals.serverIndex ?? 0;
 	const serverLabel = serverName(locals.server);
 	const db = locals.server.db;
@@ -33,12 +33,17 @@ export interface ConsoleResultView extends ConsoleResult {
 
 export const actions: Actions = {
 	run: async ({ request, locals }) => {
-		if (!locals.server) error(404, 'Server not found');
+		const t = locals.i18n.t;
+		if (!locals.server) error(404, t('Server not found'));
 
 		const raw = await request.formData();
 		const parsed = runSchema.safeParse({ input: raw.get('input') });
 		if (!parsed.success) {
-			return { error: 'Command input is invalid (max 65,536 characters).', results: [], input: '' };
+			return {
+				error: t('Command input is invalid (max 65,536 characters).'),
+				results: [],
+				input: ''
+			};
 		}
 		const input = parsed.data.input;
 

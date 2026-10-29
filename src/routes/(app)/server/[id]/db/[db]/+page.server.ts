@@ -19,7 +19,7 @@ const querySchema = z.object({
 const selectedKeysSchema = z.array(z.string().min(1).max(6827)).min(1).max(1000);
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+	if (!locals.server || locals.serverIndex === null) error(404, locals.i18n.t('Server not found'));
 	const db = resolveDb(params, locals.server);
 	const cursorParam = url.searchParams.get('cursor');
 	const query = querySchema.parse({
@@ -56,12 +56,13 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 export const actions: Actions = {
 	delete: async ({ request, locals, params }) => {
-		if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+		const t = locals.i18n.t;
+		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
 		const parsed = selectedKeysSchema.safeParse(raw.getAll('keys').map(String));
 		if (!parsed.success) {
-			return fail(400, { error: 'Select at least one key to delete' });
+			return fail(400, { error: t('Select at least one key to delete') });
 		}
 		const client = await locals.redis(db);
 		await deleteKeys(
@@ -78,7 +79,8 @@ export const actions: Actions = {
 		);
 	},
 	flush: async ({ request, locals, params }) => {
-		if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+		if (!locals.server || locals.serverIndex === null)
+			error(404, locals.i18n.t('Server not found'));
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
 		const client = await locals.redis(db);

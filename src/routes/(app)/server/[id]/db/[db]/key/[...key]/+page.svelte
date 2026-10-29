@@ -21,9 +21,14 @@
 	import { Textarea } from '#lib/components/ui/textarea/index.ts';
 	import { keyTypeVariant, ttlPill, wireText } from '#lib/redis-format.ts';
 	import { keyHref } from '#lib/nav/paths.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
+	const tn = $derived(i18n.tn);
 
 	const PAGE_SIZE = 100;
 
@@ -55,7 +60,7 @@
 </script>
 
 {#snippet binary(base64: string)}
-	<Badge variant="muted">binary</Badge>
+	<Badge variant="muted">{t('binary')}</Badge>
 	<span class="block font-mono text-xs break-all text-muted-foreground">
 		{base64.slice(0, 96)}{base64.length > 96 ? '…' : ''}
 	</span>
@@ -75,23 +80,32 @@
 		key={data.key}
 	/>
 
-	<PageHeader title={data.key} description={`${data.label} · db${data.db} · ${data.type} key`}>
+	<PageHeader
+		title={data.key}
+		description={t('{label} · db{db} · {type} key', {
+			label: data.label,
+			db: data.db,
+			type: data.type
+		})}
+	>
 		<div class="mt-2 flex flex-wrap items-center gap-2">
 			<Badge variant={badge}>{data.type}</Badge>
 			{#if data.size !== null}
 				<Badge variant="info">
-					{data.type === 'string' ? `${data.size} bytes` : `${data.size} entries`}
+					{data.type === 'string'
+						? tn('{n} byte', '{n} bytes', data.size)
+						: tn('{n} entry', '{n} entries', data.size)}
 				</Badge>
 			{/if}
 			{#if data.encoding}
 				<Badge variant="muted">{data.encoding}</Badge>
 			{/if}
-			<Badge variant={pill.variant}>{pill.label}</Badge>
+			<Badge variant={pill.variant}>{t(pill.label)}</Badge>
 		</div>
 		{#snippet actions()}
 			<Button href={back} variant="outline" size="sm">
 				<RefreshCw />
-				Refresh
+				{t('Refresh')}
 			</Button>
 
 			<Dialog.Root>
@@ -105,28 +119,30 @@
 				</Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-md">
 					<Dialog.Header>
-						<Dialog.Title>Edit TTL</Dialog.Title>
+						<Dialog.Title>{t('Edit TTL')}</Dialog.Title>
 						<Dialog.Description>
-							Current: {pill.label}. Set an expiry in seconds for this key.
+							{t('Current: {pill}. Set an expiry in seconds for this key.', {
+								pill: t(pill.label)
+							})}
 						</Dialog.Description>
 					</Dialog.Header>
 					<form method="POST" action="?/ttl" class="flex flex-col gap-4">
 						{@render offsetFields()}
 						<div class="flex flex-col gap-2">
-							<Label for="ttl-seconds">Seconds</Label>
+							<Label for="ttl-seconds">{t('Seconds')}</Label>
 							<Input
 								id="ttl-seconds"
 								name="seconds"
 								type="number"
 								min={0}
-								placeholder="no expiry"
+								placeholder={t('no expiry')}
 							/>
 						</div>
 						<p class="text-sm text-muted-foreground">
-							Empty or 0 removes the expiry (PERSIST); a positive value sets EXPIRE.
+							{t('Empty or 0 removes the expiry (PERSIST); a positive value sets EXPIRE.')}
 						</p>
 						<Dialog.Footer>
-							<Button type="submit" size="sm">Apply</Button>
+							<Button type="submit" size="sm">{t('Apply')}</Button>
 						</Dialog.Footer>
 					</form>
 				</Dialog.Content>
@@ -137,18 +153,18 @@
 					{#snippet child({ props })}
 						<Button {...props} variant="outline" size="sm">
 							<PenLine />
-							Rename
+							{t('Rename')}
 						</Button>
 					{/snippet}
 				</Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-md">
 					<Dialog.Header>
-						<Dialog.Title>Rename key</Dialog.Title>
-						<Dialog.Description>Moving the key keeps its value and TTL.</Dialog.Description>
+						<Dialog.Title>{t('Rename key')}</Dialog.Title>
+						<Dialog.Description>{t('Moving the key keeps its value and TTL.')}</Dialog.Description>
 					</Dialog.Header>
 					<form method="POST" action="?/rename" class="flex flex-col gap-4">
 						<div class="flex flex-col gap-2">
-							<Label for="rename-name">New name</Label>
+							<Label for="rename-name">{t('New name')}</Label>
 							<Input
 								id="rename-name"
 								name="name"
@@ -159,7 +175,7 @@
 							/>
 						</div>
 						<Dialog.Footer>
-							<Button type="submit" size="sm">Rename</Button>
+							<Button type="submit" size="sm">{t('Rename')}</Button>
 						</Dialog.Footer>
 					</form>
 				</Dialog.Content>
@@ -171,21 +187,23 @@
 						{#snippet child({ props })}
 							<Button {...props} variant="destructive" size="sm">
 								<Trash2 />
-								Delete
+								{t('Delete')}
 							</Button>
 						{/snippet}
 					</AlertDialog.Trigger>
 					<AlertDialog.Content>
 						<AlertDialog.Header>
-							<AlertDialog.Title>Delete “{data.key}”?</AlertDialog.Title>
+							<AlertDialog.Title>{t('Delete “{key}”?', { key: data.key })}</AlertDialog.Title>
 							<AlertDialog.Description>
-								The {data.type} key and its value are removed. This cannot be undone.
+								{t('The {type} key and its value are removed. This cannot be undone.', {
+									type: data.type
+								})}
 							</AlertDialog.Description>
 						</AlertDialog.Header>
 						<AlertDialog.Footer>
-							<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+							<AlertDialog.Cancel>{t('Cancel')}</AlertDialog.Cancel>
 							<AlertDialog.Action variant="destructive" type="submit" form="key-delete-form">
-								Delete key
+								{t('Delete key')}
 							</AlertDialog.Action>
 						</AlertDialog.Footer>
 					</AlertDialog.Content>
@@ -197,9 +215,11 @@
 	{#if data.type === 'string' && data.value.type === 'string'}
 		<Card.Root>
 			<Card.Header class="border-b py-5">
-				<Card.Title>Value</Card.Title>
+				<Card.Title>{t('Value')}</Card.Title>
 				{#if data.encoding}
-					<Card.Description>encoded as {data.encoding}</Card.Description>
+					<Card.Description
+						>{t('encoded as {encoding}', { encoding: data.encoding })}</Card.Description
+					>
 				{/if}
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-3">
@@ -214,22 +234,25 @@
 						/>
 					</form>
 					{#if data.json}
-						<p class="text-xs text-muted-foreground">This value parses as JSON.</p>
+						<p class="text-xs text-muted-foreground">{t('This value parses as JSON.')}</p>
 					{/if}
 					<div class="flex flex-wrap items-center gap-2">
 						<Button variant="outline" size="sm" onclick={prettyPrint} disabled={!data.json}>
-							Pretty print
+							{t('Pretty print')}
 						</Button>
-						<Button variant="ghost" size="sm" onclick={rawAgain} disabled={!data.json}>Raw</Button>
-						<Button type="submit" form="save-string-form" size="sm">Save</Button>
+						<Button variant="ghost" size="sm" onclick={rawAgain} disabled={!data.json}>
+							{t('Raw')}
+						</Button>
+						<Button type="submit" form="save-string-form" size="sm">{t('Save')}</Button>
 					</div>
 				{:else}
 					<Alert variant="warning">
 						<TriangleAlert />
-						<AlertTitle>Binary value</AlertTitle>
+						<AlertTitle>{t('Binary value')}</AlertTitle>
 						<AlertDescription>
-							This value is not valid UTF-8, so it is shown base64-encoded and cannot be edited
-							here.
+							{t(
+								'This value is not valid UTF-8, so it is shown base64-encoded and cannot be edited here.'
+							)}
 						</AlertDescription>
 					</Alert>
 					<Textarea readonly rows={6} value={data.value.value.base64} class="font-mono" />
@@ -240,20 +263,20 @@
 		<Card.Root class="gap-0 py-0" data-testid="hash-fields">
 			<Card.Header class="border-b py-5">
 				<Card.Title
-					>Fields <span class="font-normal text-muted-foreground">({data.value.length})</span
-					></Card.Title
+					>{t('Fields')}
+					<span class="font-normal text-muted-foreground">({data.value.length})</span></Card.Title
 				>
 			</Card.Header>
 			<Card.Content class="px-0">
 				{#if data.value.entries.length === 0}
-					<p class="p-10 text-center text-sm text-muted-foreground">This hash is empty.</p>
+					<p class="p-10 text-center text-sm text-muted-foreground">{t('This hash is empty.')}</p>
 				{:else}
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head class="w-2/5">Field</Table.Head>
-								<Table.Head>Value</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">Delete</span></Table.Head>
+								<Table.Head class="w-2/5">{t('Field')}</Table.Head>
+								<Table.Head>{t('Value')}</Table.Head>
+								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -274,7 +297,7 @@
 													value={entry.value.text}
 													class="min-w-0 flex-1 font-mono"
 												/>
-												<Button type="submit" variant="outline" size="xs">Save</Button>
+												<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
 											</form>
 										{:else}
 											{@render binary(entry.value.base64)}
@@ -288,7 +311,7 @@
 												type="submit"
 												variant="ghost"
 												size="icon-sm"
-												aria-label="Delete field {fieldText}"
+												aria-label={t('Delete field {field}', { field: fieldText })}
 											>
 												<Trash2 />
 											</Button>
@@ -306,14 +329,14 @@
 					<Input
 						name="field"
 						required
-						placeholder="field"
-						aria-label="New field name"
+						placeholder={t('field')}
+						aria-label={t('New field name')}
 						class="w-48 font-mono"
 					/>
 					<Input
 						name="value"
-						placeholder="value"
-						aria-label="New field value"
+						placeholder={t('value')}
+						aria-label={t('New field value')}
 						class="min-w-48 flex-1 font-mono"
 					/>
 					<Button type="submit" variant="outline" size="sm">
@@ -327,25 +350,28 @@
 		<Card.Root class="gap-0 py-0" data-testid="list-items">
 			<Card.Header class="border-b py-5">
 				<Card.Title
-					>Elements <span class="font-normal text-muted-foreground">({data.value.length})</span
-					></Card.Title
+					>{t('Elements')}
+					<span class="font-normal text-muted-foreground">({data.value.length})</span></Card.Title
 				>
 				{#if data.value.entries.length > 0}
 					<Card.Description>
-						showing indexes {data.value.start}–{data.value.start + data.value.entries.length - 1}
+						{t('showing indexes {start}–{end}', {
+							start: data.value.start,
+							end: data.value.start + data.value.entries.length - 1
+						})}
 					</Card.Description>
 				{/if}
 			</Card.Header>
 			<Card.Content class="px-0">
 				{#if data.value.entries.length === 0}
-					<p class="p-10 text-center text-sm text-muted-foreground">This list is empty.</p>
+					<p class="p-10 text-center text-sm text-muted-foreground">{t('This list is empty.')}</p>
 				{:else}
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head class="w-16 text-end">Index</Table.Head>
+								<Table.Head class="w-16 text-end">{t('Index')}</Table.Head>
 								<Table.Head>Value</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">Delete</span></Table.Head>
+								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -362,7 +388,7 @@
 													value={entry.value.text}
 													class="min-w-0 flex-1 font-mono"
 												/>
-												<Button type="submit" variant="outline" size="xs">Save</Button>
+												<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
 											</form>
 										{:else}
 											{@render binary(entry.value.base64)}
@@ -376,7 +402,7 @@
 												type="submit"
 												variant="ghost"
 												size="icon-sm"
-												aria-label="Delete element {entry.index}"
+												aria-label={t('Delete element {index}', { index: entry.index })}
 											>
 												<Trash2 />
 											</Button>
@@ -394,13 +420,13 @@
 					<Input
 						name="value"
 						required
-						placeholder="value"
-						aria-label="New last element"
+						placeholder={t('value')}
+						aria-label={t('New last element')}
 						class="min-w-48 flex-1 font-mono"
 					/>
 					<Button type="submit" variant="outline" size="sm">
 						<Plus />
-						Push tail
+						{t('Push tail')}
 					</Button>
 				</form>
 			</Card.Footer>
@@ -409,19 +435,19 @@
 		<Card.Root class="gap-0 py-0" data-testid="set-members">
 			<Card.Header class="border-b py-5">
 				<Card.Title
-					>Members <span class="font-normal text-muted-foreground">({data.value.length})</span
-					></Card.Title
+					>{t('Members')}
+					<span class="font-normal text-muted-foreground">({data.value.length})</span></Card.Title
 				>
 			</Card.Header>
 			<Card.Content class="px-0">
 				{#if data.value.members.length === 0}
-					<p class="p-10 text-center text-sm text-muted-foreground">This set is empty.</p>
+					<p class="p-10 text-center text-sm text-muted-foreground">{t('This set is empty.')}</p>
 				{:else}
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Member</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">Delete</span></Table.Head>
+								<Table.Head>{t('Member')}</Table.Head>
+								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -441,7 +467,7 @@
 													type="submit"
 													variant="ghost"
 													size="icon-sm"
-													aria-label="Remove member {memberText}"
+													aria-label={t('Remove member {member}', { member: memberText })}
 												>
 													<Trash2 />
 												</Button>
@@ -460,13 +486,13 @@
 					<Input
 						name="member"
 						required
-						placeholder="member"
-						aria-label="New member"
+						placeholder={t('member')}
+						aria-label={t('New member')}
 						class="min-w-48 flex-1 font-mono"
 					/>
 					<Button type="submit" variant="outline" size="sm">
 						<Plus />
-						Add member
+						{t('Add member')}
 					</Button>
 				</form>
 			</Card.Footer>
@@ -475,21 +501,22 @@
 		<Card.Root class="gap-0 py-0" data-testid="zset-entries">
 			<Card.Header class="border-b py-5">
 				<Card.Title
-					>Sorted entries <span class="font-normal text-muted-foreground"
-						>({data.value.length})</span
-					></Card.Title
+					>{t('Sorted entries')}
+					<span class="font-normal text-muted-foreground">({data.value.length})</span></Card.Title
 				>
 			</Card.Header>
 			<Card.Content class="px-0">
 				{#if data.value.entries.length === 0}
-					<p class="p-10 text-center text-sm text-muted-foreground">This sorted set is empty.</p>
+					<p class="p-10 text-center text-sm text-muted-foreground">
+						{t('This sorted set is empty.')}
+					</p>
 				{:else}
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Member</Table.Head>
-								<Table.Head class="w-32">Score</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">Delete</span></Table.Head>
+								<Table.Head>{t('Member')}</Table.Head>
+								<Table.Head class="w-32">{t('Score')}</Table.Head>
+								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -510,10 +537,10 @@
 													type="number"
 													step="any"
 													value={entry.score}
-													aria-label="Score of {memberText}"
+													aria-label={t('Score of {member}', { member: memberText })}
 													class="w-24"
 												/>
-												<Button type="submit" variant="outline" size="xs">Save</Button>
+												<Button type="submit" variant="outline" size="xs">{t('Save')}</Button>
 											</form>
 										{:else}
 											<span class="tabular-nums">{entry.score}</span>
@@ -528,7 +555,7 @@
 													type="submit"
 													variant="ghost"
 													size="icon-sm"
-													aria-label="Remove member {memberText}"
+													aria-label={t('Remove member {member}', { member: memberText })}
 												>
 													<Trash2 />
 												</Button>
@@ -547,8 +574,8 @@
 					<Input
 						name="member"
 						required
-						placeholder="member"
-						aria-label="New member"
+						placeholder={t('member')}
+						aria-label={t('New member')}
 						class="w-48 font-mono"
 					/>
 					<Input
@@ -556,8 +583,8 @@
 						type="number"
 						step="any"
 						required
-						placeholder="score"
-						aria-label="New member score"
+						placeholder={t('score')}
+						aria-label={t('New member score')}
 						class="w-24"
 					/>
 					<Button type="submit" variant="outline" size="sm">
@@ -571,20 +598,20 @@
 		<Card.Root class="gap-0 py-0" data-testid="stream-entries">
 			<Card.Header class="border-b py-5">
 				<Card.Title
-					>Entries <span class="font-normal text-muted-foreground">({data.value.length})</span
-					></Card.Title
+					>{t('Entries')}
+					<span class="font-normal text-muted-foreground">({data.value.length})</span></Card.Title
 				>
 			</Card.Header>
 			<Card.Content class="px-0">
 				{#if data.value.entries.length === 0}
-					<p class="p-10 text-center text-sm text-muted-foreground">This stream is empty.</p>
+					<p class="p-10 text-center text-sm text-muted-foreground">{t('This stream is empty.')}</p>
 				{:else}
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head class="w-48">ID</Table.Head>
-								<Table.Head>Fields</Table.Head>
-								<Table.Head class="w-12"><span class="sr-only">Delete</span></Table.Head>
+								<Table.Head class="w-48">{t('ID')}</Table.Head>
+								<Table.Head>{t('Fields')}</Table.Head>
+								<Table.Head class="w-12"><span class="sr-only">{t('Delete')}</span></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -614,7 +641,7 @@
 												type="submit"
 												variant="ghost"
 												size="icon-sm"
-												aria-label="Delete entry {entry.id}"
+												aria-label={t('Delete entry {id}', { id: entry.id })}
 											>
 												<Trash2 />
 											</Button>
@@ -632,19 +659,19 @@
 					<Input
 						name="name"
 						required
-						placeholder="field name"
-						aria-label="New entry field name"
+						placeholder={t('field name')}
+						aria-label={t('New entry field name')}
 						class="w-48 font-mono"
 					/>
 					<Input
 						name="value"
-						placeholder="value"
-						aria-label="New entry field value"
+						placeholder={t('value')}
+						aria-label={t('New entry field value')}
 						class="min-w-48 flex-1 font-mono"
 					/>
 					<Button type="submit" variant="outline" size="sm">
 						<Plus />
-						Add entry
+						{t('Add entry')}
 					</Button>
 				</form>
 			</Card.Footer>
@@ -660,16 +687,18 @@
 				size="sm"
 			>
 				<ChevronLeft />
-				Previous
+				{t('Previous')}
 			</Button>
-			<span class="text-sm text-muted-foreground">offset {data.offset}</span>
+			<span class="text-sm text-muted-foreground"
+				>{t('offset {offset}', { offset: data.offset })}</span
+			>
 			<Button
 				href={`${back}?offset=${nextOffset}`}
 				disabled={data.value.type === 'string' || data.value.length < PAGE_SIZE}
 				variant="outline"
 				size="sm"
 			>
-				Next
+				{t('Next')}
 				<ChevronRight />
 			</Button>
 		</div>

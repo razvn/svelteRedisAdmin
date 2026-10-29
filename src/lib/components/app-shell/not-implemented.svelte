@@ -3,7 +3,7 @@
 	import PageHeader from './page-header.svelte';
 	import { Badge } from '#lib/components/ui/badge/index.ts';
 	import * as Card from '#lib/components/ui/card/index.ts';
-	import { phaseTitle } from '#lib/nav/tabs.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 
 	interface Props {
 		title: string;
@@ -12,6 +12,9 @@
 	}
 
 	let { title, phase }: Props = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 </script>
 
 <svelte:head>
@@ -30,15 +33,15 @@
 				<Construction class="size-8" />
 			</span>
 			<div class="grid gap-1">
-				<h2 class="text-lg font-semibold">Coming soon</h2>
+				<h2 class="text-lg font-semibold">{t('Coming soon')}</h2>
 				<p class="max-w-md text-sm text-muted-foreground">
-					This page is not implemented yet. It is on the way and will show up here.
+					{t('This page is not implemented yet. It is on the way and will show up here.')}
 				</p>
 			</div>
 			<p class="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
-				Planned in
-				<Badge variant="primary">{phaseTitle(phase)}</Badge>
-				(see docs/ROADMAP.md).
+				{t('Planned in')}
+				<Badge variant="primary">{t('Phase {n}', { n: phase })}</Badge>
+				{t('(see docs/ROADMAP.md).')}
 			</p>
 		</Card.Content>
 	</Card.Root>

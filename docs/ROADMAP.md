@@ -77,7 +77,6 @@ makes sense, with a modern UI and a maintainable test suite.
   access to.
 
   ### 5a — App roles + per-user server visibility (app-side, ships first)
-
   - **Config** (BC-compatible additions, zod-validated):
     ```jsonc
     "login": [
@@ -104,19 +103,21 @@ makes sense, with a modern UI and a maintainable test suite.
     style) — deferred if `servers` defaults to "all" in practice.
 
   ### 5b — Pluggable authentication (delegation / extensions)
-
   - **Plugin interface** (`src/lib/server/auth/plugins/`):
     ```ts
     export interface AuthPlugin {
-      name: string;
-      // Return session facts for a request, or null when unauthenticated.
-      authenticate(ctx: { request: Request; cookies: Cookies; config: AppConfig }):
-        Promise<PluginSession | null>;
+    	name: string;
+    	// Return session facts for a request, or null when unauthenticated.
+    	authenticate(ctx: {
+    		request: Request;
+    		cookies: Cookies;
+    		config: AppConfig;
+    	}): Promise<PluginSession | null>;
     }
     // PluginSession: { username: string; role?: Role; servers?: number[] | null }
     ```
     Selected by `config.auth = { "plugin": "config" | "http" | "header" | <custom> }` (default
-    `config`). The signed-cookie session is the session *store*, plugins are the *source of truth*:
+    `config`). The signed-cookie session is the session _store_, plugins are the _source of truth_:
     plugin runs first, session cookie only caches the result for the `cookieLifetime`.
   - **Built-ins**:
     - `config` — the current login list + role/servers (5a), with the `/login` form.
@@ -130,7 +131,6 @@ makes sense, with a modern UI and a maintainable test suite.
     map RBAC/claims to servers — "user has access to that node → gets those RedisAdmin servers").
 
   ### 5c — Later (recorded, not scheduled)
-
   - **Per-user Redis credentials**: login entries may carry `redis: {username, password}` so Redis 6+
     ACLs enforce command-level permissions end-to-end; ACL DENIED errors render as friendly
     "not permitted" alerts instead of 500s.

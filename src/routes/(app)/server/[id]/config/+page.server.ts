@@ -10,7 +10,8 @@ const setSchema = z.object({
 });
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	if (!locals.server) error(404, 'Server not found');
+	const t = locals.i18n.t;
+	if (!locals.server) error(404, t('Server not found'));
 	const client = await locals.redis();
 
 	const config = await getConfig(client);
@@ -28,7 +29,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 export const actions: Actions = {
 	set: async ({ request, locals }) => {
-		if (!locals.server) error(404, 'Server not found');
+		const t = locals.i18n.t;
+		if (!locals.server) error(404, t('Server not found'));
 
 		const raw = await request.formData();
 		const parsed = setSchema.safeParse({
@@ -36,7 +38,7 @@ export const actions: Actions = {
 			value: raw.get('value')
 		});
 		if (!parsed.success) {
-			return fail(400, { error: 'Invalid parameter name or value.' });
+			return fail(400, { error: t('Invalid parameter name or value.') });
 		}
 
 		try {
@@ -44,7 +46,7 @@ export const actions: Actions = {
 			await setConfig(client, parsed.data.parameter, parsed.data.value);
 		} catch (caught) {
 			return fail(400, {
-				error: caught instanceof Error ? caught.message : 'CONFIG SET failed.'
+				error: caught instanceof Error ? t(caught.message) : t('CONFIG SET failed.')
 			});
 		}
 

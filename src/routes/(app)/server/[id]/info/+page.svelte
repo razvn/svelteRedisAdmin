@@ -8,9 +8,14 @@
 	import { resolve } from '$app/paths';
 	import { SERVER_TABS, tabSubPath, type TabDef } from '#lib/nav/tabs.ts';
 	import { bare, serverTabHref } from '#lib/nav/paths.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
+	const tn = $derived(i18n.tn);
 
 	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
 
@@ -22,17 +27,17 @@
 			: `${serverTabHref(data.serverIndex, 'info')}?section=${encodeURIComponent(name)}`;
 </script>
 
-<svelte:head><title>Info - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
+<svelte:head><title>{t('Info')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-info">
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
-	<TabBar label="Server" tabs={SERVER_TABS} current={tabSubPath('info')} {hrefFor} />
-	<PageHeader title="Info" description="INFO output from the server" icon={Info} />
+	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('info')} {hrefFor} />
+	<PageHeader title={t('Info')} description={t('INFO output from the server')} icon={Info} />
 
 	<!-- Section filter. -->
 	<div class="flex flex-wrap items-center gap-2">
 		<a href={resolve(bare(sectionHref('')))}>
-			<Badge variant={data.section === '' ? 'primary' : 'muted'}>All sections</Badge>
+			<Badge variant={data.section === '' ? 'primary' : 'muted'}>{t('All sections')}</Badge>
 		</a>
 		{#each data.sections as name (name)}
 			<a href={resolve(bare(sectionHref(name)))}>
@@ -45,7 +50,7 @@
 		<Card.Root class="gap-0 py-0">
 			<Card.Header class="flex-row items-center justify-between gap-4 border-b py-5">
 				<Card.Title class="capitalize">{section.name}</Card.Title>
-				<Badge variant="muted">{section.entries.length} keys</Badge>
+				<Badge variant="muted">{tn('{n} key', '{n} keys', section.entries.length)}</Badge>
 			</Card.Header>
 			<Card.Content class="p-5">
 				<dl class="grid gap-x-10 gap-y-1.5 sm:grid-cols-2">
@@ -68,8 +73,8 @@
 	{#if data.section === ''}
 		<Card.Root class="gap-0 py-0">
 			<Card.Header class="border-b py-5">
-				<Card.Title>Raw</Card.Title>
-				<Card.Description>Untouched INFO reply.</Card.Description>
+				<Card.Title>{t('Raw')}</Card.Title>
+				<Card.Description>{t('Untouched INFO reply.')}</Card.Description>
 			</Card.Header>
 			<Card.Content class="p-5">
 				<pre class="font-mono text-xs whitespace-pre-wrap">{data.raw}</pre>

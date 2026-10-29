@@ -32,7 +32,8 @@ export interface OverviewData {
 }
 
 export const load: PageServerLoad = async ({ locals }): Promise<OverviewData> => {
-	if (!locals.server) error(404, 'Server not found');
+	const t = locals.i18n.t;
+	if (!locals.server) error(404, t('Server not found'));
 	const serverIndex = locals.serverIndex ?? 0;
 	const serverLabel = serverName(locals.server);
 	const server = locals.server;
@@ -58,9 +59,9 @@ export const load: PageServerLoad = async ({ locals }): Promise<OverviewData> =>
 			online: true,
 			error: null,
 			stats: {
-				version: infoValue(info, 'redis_version') ?? 'unknown',
+				version: infoValue(info, 'redis_version') ?? t('unknown'),
 				uptimeDays: Math.floor((num('uptime_in_seconds') ?? 0) / 86_400),
-				usedMemory: infoValue(info, 'used_memory_human') ?? 'unknown',
+				usedMemory: infoValue(info, 'used_memory_human') ?? t('unknown'),
 				usedMemoryPeak: infoValue(info, 'used_memory_peak_human'),
 				clients: num('connected_clients') ?? 0,
 				keys,
@@ -69,7 +70,7 @@ export const load: PageServerLoad = async ({ locals }): Promise<OverviewData> =>
 				hitRate: totalReads > 0 ? Math.round((100 * hits) / totalReads) : null,
 				evicted: num('evicted_keys') ?? 0,
 				expired: num('expired_keys') ?? 0,
-				bgsaveStatus: infoValue(info, 'rdb_last_bgsave_status') ?? 'unknown',
+				bgsaveStatus: infoValue(info, 'rdb_last_bgsave_status') ?? t('unknown'),
 				sinceLastSave:
 					lastSave === undefined ? null : Math.max(0, Math.floor(Date.now() / 1000 - lastSave))
 			},

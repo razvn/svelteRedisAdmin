@@ -7,7 +7,7 @@ import type { PageServerLoad } from './$types';
 const SECTION_ORDER = ['server', 'memory', 'clients', 'stats', 'replication', 'cpu', 'keyspace'];
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	if (!locals.server) error(404, 'Server not found');
+	if (!locals.server) error(404, locals.i18n.t('Server not found'));
 	const serverIndex = locals.serverIndex ?? 0;
 	const client = await locals.redis();
 

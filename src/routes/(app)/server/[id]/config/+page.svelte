@@ -14,9 +14,13 @@
 	import * as Table from '#lib/components/ui/table/index.ts';
 	import { SERVER_TABS, tabSubPath, type TabDef } from '#lib/nav/tabs.ts';
 	import { serverTabHref } from '#lib/nav/paths.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 
 	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
 
@@ -38,15 +42,15 @@
 	);
 </script>
 
-<svelte:head><title>Config - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
+<svelte:head><title>{t('Config')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-config">
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
-	<TabBar label="Server" tabs={SERVER_TABS} current={tabSubPath('config')} {hrefFor} />
-	<PageHeader title="Config" description="CONFIG GET and SET" icon={Cog}>
+	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('config')} {hrefFor} />
+	<PageHeader title={t('Config')} description={t('CONFIG GET and SET')} icon={Cog}>
 		{#snippet actions()}
 			{#if data.saved}
-				<Badge variant="success">Saved {data.saved}</Badge>
+				<Badge variant="success">{t('Saved {param}', { param: data.saved })}</Badge>
 			{/if}
 		{/snippet}
 	</PageHeader>
@@ -60,19 +64,19 @@
 	{#if editing}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Set parameter</Card.Title>
+				<Card.Title>{t('Set parameter')}</Card.Title>
 				<Card.Description class="font-mono break-all">{editing[0]}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<form method="POST" action="?/set" class="flex flex-col gap-4">
 					<input type="hidden" name="parameter" value={editing[0]} />
 					<div class="flex flex-col gap-2">
-						<Label for="config-value">Value</Label>
+						<Label for="config-value">{t('Value')}</Label>
 						<Input id="config-value" name="value" value={editing[1]} class="font-mono" required />
 					</div>
 					<div class="flex gap-2">
-						<Button type="submit">Save</Button>
-						<Button variant="outline" href={basePath}>Cancel</Button>
+						<Button type="submit">{t('Save')}</Button>
+						<Button variant="outline" href={basePath}>{t('Cancel')}</Button>
 					</div>
 				</form>
 			</Card.Content>
@@ -81,23 +85,31 @@
 
 	<Card.Root class="gap-0 py-0">
 		<Card.Header class="flex-row items-center justify-between gap-4 border-b py-5">
-			<Card.Title>Parameters</Card.Title>
-			<Badge variant="muted">{filtered.length} of {data.entries.length}</Badge>
+			<Card.Title>{t('Parameters')}</Card.Title>
+			<Badge variant="muted"
+				>{t('{shown} of {total}', { shown: filtered.length, total: data.entries.length })}</Badge
+			>
 		</Card.Header>
 		<Card.Content class="px-0">
 			<form method="GET" action={basePath} class="flex gap-2 border-b p-5" role="search">
-				<Input name="q" value={data.q} placeholder="Filter parameters…" class="max-w-xs" />
+				<Input
+					name="q"
+					value={data.q}
+					placeholder={t('Filter parameters…')}
+					aria-label={t('Filter parameters…')}
+					class="max-w-xs"
+				/>
 				<Button type="submit" variant="outline">
 					<Search />
-					Search
+					{t('Search')}
 				</Button>
 			</form>
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Parameter</Table.Head>
-						<Table.Head>Value</Table.Head>
-						<Table.Head class="w-20"><span class="sr-only">Actions</span></Table.Head>
+						<Table.Head>{t('Parameter')}</Table.Head>
+						<Table.Head>{t('Value')}</Table.Head>
+						<Table.Head class="w-20"><span class="sr-only">{t('Actions')}</span></Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -112,14 +124,14 @@
 									href="{basePath}?edit={encodeURIComponent(parameter)}"
 								>
 									<Pencil />
-									Edit
+									{t('Edit')}
 								</Button>
 							</Table.Cell>
 						</Table.Row>
 					{:else}
 						<Table.Row>
 							<Table.Cell colspan={3} class="text-muted-foreground">
-								No parameters match this filter.
+								{t('No parameters match this filter.')}
 							</Table.Cell>
 						</Table.Row>
 					{/each}

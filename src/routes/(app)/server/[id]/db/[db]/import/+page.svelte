@@ -12,26 +12,36 @@
 	import { Label } from '#lib/components/ui/label/index.ts';
 	import { dbTabHref } from '#lib/nav/paths.ts';
 	import { DB_TABS, tabSubPath } from '#lib/nav/tabs.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
+	const tn = $derived(i18n.tn);
 </script>
 
-<svelte:head><title>Import into db{data.db} — svelteRedisAdmin</title></svelte:head>
+<svelte:head>
+	<title>{t('Import into db{db}', { db: data.db })} — svelteRedisAdmin</title>
+</svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="import">
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
 
 	<TabBar
-		label="Database"
+		label={t('Database')}
 		tabs={DB_TABS}
 		current="import"
 		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader
-		title="Import"
-		description={`Recreate keys in db${data.db} on ${data.label} from a JSON dump.`}
+		title={t('Import')}
+		description={t('Recreate keys in db{db} on {label} from a JSON dump.', {
+			db: data.db,
+			label: data.label
+		})}
 		icon={Upload}
 	/>
 
@@ -40,25 +50,34 @@
 			{#if form && 'error' in form}
 				<Alert variant="destructive">
 					<CircleAlert />
-					<AlertTitle>Import failed</AlertTitle>
+					<AlertTitle>{t('Import failed')}</AlertTitle>
 					<AlertDescription>{form.error}</AlertDescription>
 				</Alert>
 			{:else if form}
 				<Alert variant="success">
 					<CircleCheck />
-					<AlertTitle>Imported {form.imported} of {form.total} keys</AlertTitle>
+					<AlertTitle>
+						{t('Imported {imported} of {total} keys', {
+							imported: form.imported,
+							total: form.total
+						})}
+					</AlertTitle>
 					<AlertDescription>
 						{#if form.errors.length > 0}
-							{form.errors.length} keys could not be imported.
+							{tn(
+								'{n} key could not be imported.',
+								'{n} keys could not be imported.',
+								form.errors.length
+							)}
 						{:else}
-							Every key of the dump was recreated.
+							{t('Every key of the dump was recreated.')}
 						{/if}
 					</AlertDescription>
 				</Alert>
 				{#if form.errors.length > 0}
 					<Alert variant="warning">
 						<CircleAlert />
-						<AlertTitle>Per-key errors</AlertTitle>
+						<AlertTitle>{t('Per-key errors')}</AlertTitle>
 						<AlertDescription>
 							<ul class="list-inside list-disc font-mono text-xs">
 								{#each form.errors as message (message)}
@@ -77,7 +96,7 @@
 				class="flex flex-col gap-5"
 			>
 				<div class="flex flex-col gap-2">
-					<Label for="import-file">JSON dump</Label>
+					<Label for="import-file">{t('JSON dump')}</Label>
 					<Input
 						id="import-file"
 						type="file"
@@ -87,14 +106,14 @@
 					/>
 				</div>
 				<p class="text-sm text-muted-foreground">
-					Upload a file produced by the Export tab: <code class="font-mono"
-						>{'{"keys": [{"key": ..., "type": ..., "ttl": ..., "value": ...}]}'}</code
-					>. Existing keys with the same name are overwritten.
+					{@html i18n.t(
+						'Upload a file produced by the Export tab: <code class="font-mono">{"keys": [{"key": ..., "type": ..., "ttl": ..., "value": ...}]}</code>. Existing keys with the same name are overwritten.'
+					)}
 				</p>
 				<div>
 					<Button type="submit">
 						<Upload />
-						Import keys
+						{t('Import keys')}
 					</Button>
 				</div>
 			</form>

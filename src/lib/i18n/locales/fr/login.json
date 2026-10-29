@@ -8,6 +8,6 @@
 	"Enter the username": "Saisissez l'identifiant",
 	"Enter the password": "Saisissez le mot de passe",
 	"Credentials from the <code>config.json</code> <code>login</code> list.": "Identifiants issus de la liste <code>login</code> du fichier <code>config.json</code>.",
-	"{n} server": ["{n} serveur", "{n} serveurs"],
+	"{n} server": ["{n} serveur", "{n} de serveurs", "{n} serveurs"],
 	"{n} servers": "{n} serveurs"
 }

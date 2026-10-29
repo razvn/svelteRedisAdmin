@@ -12,9 +12,14 @@
 	import { Alert, AlertDescription } from '#lib/components/ui/alert/index.ts';
 	import { formatNumber } from '#lib/format.ts';
 	import { serverHref } from '#lib/nav/paths.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
+	const tn = $derived(i18n.tn);
 
 	const appTitle = 'svelteRedisAdmin';
 </script>
@@ -24,13 +29,11 @@
 <div class="flex flex-col gap-6" data-testid="home">
 	<PageHeader
 		title={appTitle}
-		description="Web admin for Redis databases. Pick a server to browse its keys."
+		description={t('Web admin for Redis databases. Pick a server to browse its keys.')}
 		icon={Database}
 	>
 		{#snippet actions()}
-			<Badge variant="muted"
-				>{data.servers.length} server{data.servers.length === 1 ? '' : 's'}</Badge
-			>
+			<Badge variant="muted">{tn('{n} server', '{n} servers', data.servers.length)}</Badge>
 		{/snippet}
 	</PageHeader>
 
@@ -43,34 +46,34 @@
 						<span class="truncate">{server.label}</span>
 					</Card.Title>
 					{#if server.online}
-						<Badge variant="success">online</Badge>
+						<Badge variant="success">{t('online')}</Badge>
 					{:else}
-						<Badge variant="destructive">offline</Badge>
+						<Badge variant="destructive">{t('offline')}</Badge>
 					{/if}
 				</Card.Header>
 				<Card.Content class="flex flex-col gap-4 p-5">
 					{#if server.online}
 						<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 							<StatCard
-								label="Version"
+								label={t('Version')}
 								value={server.version ?? '—'}
 								icon={Server}
 								tone="primary"
 							/>
 							<StatCard
-								label="Memory"
+								label={t('Memory')}
 								value={server.usedMemory ?? '—'}
 								icon={Database}
 								tone="info"
 							/>
 							<StatCard
-								label="Clients"
+								label={t('Clients')}
 								value={server.clients === undefined ? '—' : formatNumber(server.clients)}
 								icon={Users}
 								tone="success"
 							/>
 							<StatCard
-								label="Keys (default db)"
+								label={t('Keys (default db)')}
 								value={server.keys === undefined ? '—' : formatNumber(server.keys)}
 								icon={Database}
 								tone="warning"
@@ -84,7 +87,7 @@
 					{/if}
 					<Card.Footer class="flex justify-end border-0 p-0">
 						<Button href={serverHref(server.index)} size="sm">
-							Open server
+							{t('Open server')}
 							<ArrowRight />
 						</Button>
 					</Card.Footer>

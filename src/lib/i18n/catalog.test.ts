@@ -11,6 +11,9 @@ describe('catalogs', () => {
 		const fr = await loadCatalog('fr');
 		expect(fr['Sign in']).toBe('Connexion'); // login
 		expect(fr['Password']).toBe('Mot de passe'); // login
+		expect(fr['Delete selected']).toBe('Supprimer la sélection'); // app
+		expect(fr['Server not found']).toBe('Serveur introuvable'); // app
+		expect(fr['Keys in db{db}']).toBe('Clés de la db{db}'); // app
 	});
 	it('English and unknown languages have an empty catalog', async () => {
 		expect(await loadCatalog('en')).toEqual({});
@@ -19,6 +22,17 @@ describe('catalogs', () => {
 	it('translates through a loaded translator', async () => {
 		const es = await loadTranslator('es');
 		expect(es.t('Password')).toBe('Contraseña');
+		expect(es.t('Delete selected')).toBe('Eliminar la selección');
+		expect(es.t('Keys in db{db}', { db: 2 })).toBe('Claves de la db2');
+	});
+	it('uses the CLDR plural forms of a language', async () => {
+		const fr = await loadTranslator('fr');
+		expect(fr.tn('{n} key', '{n} keys', 1)).toBe('1 clé');
+		expect(fr.tn('{n} key', '{n} keys', 3)).toBe('3 clés');
+		expect(fr.tn('{n} key', '{n} keys', 1_000_000)).toBe('1000000 de clés');
+		const es = await loadTranslator('es');
+		expect(es.tn('{n} key', '{n} keys', 1)).toBe('1 clave');
+		expect(es.tn('{n} key', '{n} keys', 3)).toBe('3 claves');
 	});
 });
 

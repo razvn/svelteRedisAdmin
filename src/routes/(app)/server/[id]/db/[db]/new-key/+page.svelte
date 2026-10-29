@@ -14,9 +14,13 @@
 	import { KEY_TYPES } from '#lib/redis-format.ts';
 	import { dbHref, dbTabHref } from '#lib/nav/paths.ts';
 	import { DB_TABS, tabSubPath } from '#lib/nav/tabs.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 
 	let type = $state('string');
 
@@ -30,21 +34,23 @@
 	};
 </script>
 
-<svelte:head><title>New key in db{data.db} — svelteRedisAdmin</title></svelte:head>
+<svelte:head>
+	<title>{t('New key in db{db}', { db: data.db })} — svelteRedisAdmin</title>
+</svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="new-key">
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
 
 	<TabBar
-		label="Database"
+		label={t('Database')}
 		tabs={DB_TABS}
 		current="new-key"
 		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader
-		title="New key"
-		description={`Create a key in db${data.db} on ${data.label}.`}
+		title={t('New key')}
+		description={t('Create a key in db{db} on {label}.', { db: data.db, label: data.label })}
 		icon={Plus}
 	/>
 
@@ -59,7 +65,7 @@
 
 			<form method="POST" action="?/create" class="flex flex-col gap-5">
 				<div class="flex flex-col gap-2">
-					<Label for="new-key-name">Key name</Label>
+					<Label for="new-key-name">{t('Key name')}</Label>
 					<Input
 						id="new-key-name"
 						name="key"
@@ -72,7 +78,7 @@
 				</div>
 
 				<div class="flex flex-col gap-2">
-					<Label for="new-key-type">Type</Label>
+					<Label for="new-key-type">{t('Type')}</Label>
 					<NativeSelect id="new-key-type" name="type" bind:value={type}>
 						{#each KEY_TYPES as option (option)}
 							<option value={option}>{option}</option>
@@ -81,8 +87,10 @@
 				</div>
 
 				<div class="flex flex-col gap-2">
-					<Label for="new-key-value">Initial value</Label>
-					<p class="text-sm text-muted-foreground">{VALUE_HINTS[type] ?? ''}</p>
+					<Label for="new-key-value">{t('Initial value')}</Label>
+					<p class="text-sm text-muted-foreground">
+						{VALUE_HINTS[type] === undefined ? '' : t(VALUE_HINTS[type])}
+					</p>
 					<Textarea
 						id="new-key-value"
 						name="value"
@@ -93,13 +101,13 @@
 				</div>
 
 				<div class="flex flex-col gap-2">
-					<Label for="new-key-ttl">TTL (seconds, optional)</Label>
+					<Label for="new-key-ttl">{t('TTL (seconds, optional)')}</Label>
 					<Input
 						id="new-key-ttl"
 						name="ttl"
 						type="number"
 						min={0}
-						placeholder="no expiry"
+						placeholder={t('no expiry')}
 						class="w-40"
 					/>
 				</div>
@@ -107,9 +115,9 @@
 				<div class="flex items-center gap-2">
 					<Button type="submit">
 						<Plus />
-						Create key
+						{t('Create key')}
 					</Button>
-					<Button variant="ghost" href={dbHref(data.serverIndex, data.db)}>Cancel</Button>
+					<Button variant="ghost" href={dbHref(data.serverIndex, data.db)}>{t('Cancel')}</Button>
 				</div>
 			</form>
 		</Card.Content>

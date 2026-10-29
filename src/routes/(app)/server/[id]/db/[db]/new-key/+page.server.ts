@@ -13,7 +13,7 @@ export interface NewKeyForm {
 }
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+	if (!locals.server || locals.serverIndex === null) error(404, locals.i18n.t('Server not found'));
 	const db = resolveDb(params, locals.server);
 	return {
 		serverIndex: locals.serverIndex,
@@ -24,7 +24,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 export const actions: Actions = {
 	create: async ({ request, locals, params }) => {
-		if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+		const t = locals.i18n.t;
+		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
 		const form: NewKeyForm = {
@@ -40,13 +41,13 @@ export const actions: Actions = {
 			ttl: String(raw.get('ttl') ?? '').trim() || undefined
 		});
 		if (!parsed.success) {
-			return fail(400, { ...form, error: parsed.error.issues[0]?.message ?? 'Invalid input' });
+			return fail(400, { ...form, error: t(parsed.error.issues[0]?.message ?? 'Invalid input') });
 		}
 
 		const client = await locals.redis(db);
 		const keyBuf = Buffer.from(parsed.data.key, 'utf8');
 		if (await client.exists(keyBuf)) {
-			return fail(400, { ...form, error: 'A key with this name already exists' });
+			return fail(400, { ...form, error: t('A key with this name already exists') });
 		}
 		const problem = await createKey(
 			client,
@@ -55,7 +56,7 @@ export const actions: Actions = {
 			parsed.data.value,
 			parsed.data.ttl
 		);
-		if (problem) return fail(400, { ...form, error: problem });
+		if (problem) return fail(400, { ...form, error: t(problem) });
 
 		redirect(303, keyHref(locals.serverIndex, db, parsed.data.key));
 	}

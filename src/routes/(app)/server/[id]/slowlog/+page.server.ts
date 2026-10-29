@@ -9,7 +9,7 @@ const resetSchema = z.object({
 });
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.server) error(404, 'Server not found');
+	if (!locals.server) error(404, locals.i18n.t('Server not found'));
 	const client = await locals.redis();
 
 	const entries = await getSlowlog(client, 100);
@@ -35,19 +35,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	reset: async ({ request, locals }) => {
-		if (!locals.server) error(404, 'Server not found');
+		const t = locals.i18n.t;
+		if (!locals.server) error(404, t('Server not found'));
 
 		const raw = await request.formData();
 		const parsed = resetSchema.safeParse({ confirm: raw.get('confirm') });
 		if (!parsed.success) {
-			return fail(400, { error: 'Missing confirmation.' });
+			return fail(400, { error: t('Missing confirmation.') });
 		}
 
 		try {
 			const client = await locals.redis();
 			await slowlogReset(client);
 		} catch {
-			return fail(400, { error: 'SLOWLOG RESET failed.' });
+			return fail(400, { error: t('SLOWLOG RESET failed.') });
 		}
 
 		redirect(303, `/server/${locals.serverIndex ?? 0}/slowlog`);

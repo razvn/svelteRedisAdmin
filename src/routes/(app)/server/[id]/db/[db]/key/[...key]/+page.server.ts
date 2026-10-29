@@ -28,10 +28,11 @@ const MAX_VALUE = 1_000_000;
 
 /** Everything every action needs: validated params plus an open connection. */
 async function keyContext(locals: App.Locals, params: { db: string; key?: string }) {
-	if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+	const t = locals.i18n.t;
+	if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
 	const db = resolveDb(params, locals.server);
 	const key = keyNameSchema.safeParse(params.key);
-	if (!key.success) error(404, 'Key not found');
+	if (!key.success) error(404, t('Key not found'));
 	const client = await locals.redis(db);
 	return {
 		serverIndex: locals.serverIndex,
@@ -53,10 +54,11 @@ async function payload(request: Request): Promise<Record<string, string>> {
 }
 
 function parseOr400<T>(
-	parsed: { success: true; data: T } | { success: false; error: { issues: { message: string }[] } }
+	parsed: { success: true; data: T } | { success: false; error: { issues: { message: string }[] } },
+	t: (msgid: string) => string
 ): T {
 	if (!parsed.success) {
-		throw fail(400, { error: parsed.error.issues[0]?.message ?? 'Invalid input' });
+		throw fail(400, { error: t(parsed.error.issues[0]?.message ?? 'Invalid input') });
 	}
 	return parsed.data;
 }
@@ -74,18 +76,19 @@ const indexSchema = z.coerce.number().int().min(0);
 const offsetOf = (data: Record<string, string>) => intParam(data['offset'] ?? null);
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+	const t = locals.i18n.t;
+	if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
 	const db = resolveDb(params, locals.server);
 	const key = keyNameSchema.safeParse(params.key);
-	if (!key.success) error(404, 'Key not found');
+	if (!key.success) error(404, t('Key not found'));
 
 	const client = await locals.redis(db);
 	const keyBuf = Buffer.from(key.data, 'utf8');
-	if (!(await client.exists(keyBuf))) error(404, 'Key not found');
+	if (!(await client.exists(keyBuf))) error(404, t('Key not found'));
 
 	const type = String(await client.type(keyBuf));
 	if (!KEY_TYPES.includes(type as (typeof KEY_TYPES)[number])) {
-		error(400, `Unsupported key type: ${type}`);
+		error(400, t('Unsupported key type: {type}', { type }));
 	}
 
 	const [details, value] = await Promise.all([
@@ -118,8 +121,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 export const actions: Actions = {
 	'save-string': async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const value = parseOr400(z.object({ value: z.string().max(MAX_VALUE) }).safeParse(data));
+		const value = parseOr400(z.object({ value: z.string().max(MAX_VALUE) }).safeParse(data), t);
 		// SET removes the expiry — read the TTL first and re-apply it.
 		const ttl = Number(await buffers(ctx.client).ttl(ctx.keyBuf));
 		await setString(ctx.client, ctx.keyBuf, { kind: 'text', text: value.value }, ttl > 0 ? ttl : 0);
@@ -128,12 +132,14 @@ export const actions: Actions = {
 
 	ttl: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
 		// Empty input (or 0) persists the key.
 		const seconds = parseOr400(
 			z
 				.object({ seconds: z.coerce.number().int().min(0).max(2_147_483_647).catch(0) })
-				.safeParse(data)
+				.safeParse(data),
+			t
 		);
 		await expireKey(ctx.client, ctx.keyBuf, seconds.seconds);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
@@ -141,31 +147,35 @@ export const actions: Actions = {
 
 	rename: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const name = parseOr400(z.object({ name: keyNameSchema }).safeParse(data));
+		const name = parseOr400(z.object({ name: keyNameSchema }).safeParse(data), t);
 		const to = Buffer.from(name.name, 'utf8');
 		if (await ctx.client.exists(to)) {
-			return fail(400, { error: 'A key with this name already exists' });
+			return fail(400, { error: t('A key with this name already exists') });
 		}
 		try {
 			await renameKey(ctx.client, ctx.keyBuf, to);
 		} catch {
-			return fail(400, { error: 'Could not rename the key' });
+			return fail(400, { error: t('Could not rename the key') });
 		}
 		redirect(303, keyHref(ctx.serverIndex, ctx.db, name.name));
 	},
 
 	delete: async ({ locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		await deleteKeys(ctx.client, [ctx.keyBuf]);
 		redirect(303, dbHref(ctx.serverIndex, ctx.db));
 	},
 
 	hset: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
 		const parsed = parseOr400(
-			z.object({ field: fieldSchema, value: z.string().max(MAX_VALUE) }).safeParse(data)
+			z.object({ field: fieldSchema, value: z.string().max(MAX_VALUE) }).safeParse(data),
+			t
 		);
 		await hashSetField(
 			ctx.client,
@@ -178,17 +188,20 @@ export const actions: Actions = {
 
 	hdel: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ field: fieldSchema }).safeParse(data));
+		const parsed = parseOr400(z.object({ field: fieldSchema }).safeParse(data), t);
 		await hashDeleteField(ctx.client, ctx.keyBuf, { kind: 'text', text: parsed.field });
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	},
 
 	lset: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
 		const parsed = parseOr400(
-			z.object({ index: indexSchema, value: z.string().max(MAX_VALUE) }).safeParse(data)
+			z.object({ index: indexSchema, value: z.string().max(MAX_VALUE) }).safeParse(data),
+			t
 		);
 		await listSetIndex(ctx.client, ctx.keyBuf, parsed.index, { kind: 'text', text: parsed.value });
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
@@ -196,41 +209,47 @@ export const actions: Actions = {
 
 	ldel: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ index: indexSchema }).safeParse(data));
+		const parsed = parseOr400(z.object({ index: indexSchema }).safeParse(data), t);
 		await listDeleteIndex(ctx.client, ctx.keyBuf, parsed.index);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	},
 
 	lpush: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ value: memberSchema }).safeParse(data));
+		const parsed = parseOr400(z.object({ value: memberSchema }).safeParse(data), t);
 		await listPush(ctx.client, ctx.keyBuf, 'tail', [{ kind: 'text', text: parsed.value }]);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	},
 
 	sadd: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ member: memberSchema }).safeParse(data));
+		const parsed = parseOr400(z.object({ member: memberSchema }).safeParse(data), t);
 		await setAdd(ctx.client, ctx.keyBuf, [{ kind: 'text', text: parsed.member }]);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	},
 
 	srem: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ member: memberSchema }).safeParse(data));
+		const parsed = parseOr400(z.object({ member: memberSchema }).safeParse(data), t);
 		await setRemove(ctx.client, ctx.keyBuf, [{ kind: 'text', text: parsed.member }]);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	},
 
 	zadd: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
 		const parsed = parseOr400(
-			z.object({ member: memberSchema, score: z.coerce.number().finite() }).safeParse(data)
+			z.object({ member: memberSchema, score: z.coerce.number().finite() }).safeParse(data),
+			t
 		);
 		await zSetAdd(ctx.client, ctx.keyBuf, {
 			member: { kind: 'text', text: parsed.member },
@@ -241,17 +260,20 @@ export const actions: Actions = {
 
 	zrem: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ member: memberSchema }).safeParse(data));
+		const parsed = parseOr400(z.object({ member: memberSchema }).safeParse(data), t);
 		await zSetRemove(ctx.client, ctx.keyBuf, [{ kind: 'text', text: parsed.member }]);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	},
 
 	xadd: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
 		const parsed = parseOr400(
-			z.object({ name: fieldSchema, value: z.string().max(MAX_VALUE) }).safeParse(data)
+			z.object({ name: fieldSchema, value: z.string().max(MAX_VALUE) }).safeParse(data),
+			t
 		);
 		await streamAdd(ctx.client, ctx.keyBuf, [
 			{ name: { kind: 'text', text: parsed.name }, value: { kind: 'text', text: parsed.value } }
@@ -261,8 +283,9 @@ export const actions: Actions = {
 
 	xdel: async ({ request, locals, params }) => {
 		const ctx = await keyContext(locals, params);
+		const t = locals.i18n.t;
 		const data = await payload(request);
-		const parsed = parseOr400(z.object({ id: z.string().min(1) }).safeParse(data));
+		const parsed = parseOr400(z.object({ id: z.string().min(1) }).safeParse(data), t);
 		await streamDelete(ctx.client, ctx.keyBuf, [parsed.id]);
 		backToKey(ctx.serverIndex, ctx.db, ctx.key, offsetOf(data));
 	}

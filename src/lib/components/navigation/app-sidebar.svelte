@@ -7,6 +7,7 @@
 	import BrandMark from '#lib/components/app-shell/brand-mark.svelte';
 	import * as Sidebar from '#lib/components/ui/sidebar/index.ts';
 	import { dbHref, serverHref } from '#lib/nav/paths.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 
 	interface ServerEntry {
 		index: number;
@@ -20,6 +21,9 @@
 	}
 
 	let { servers }: Props = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 
 	const currentIndex = $derived.by(() => {
 		const id = page.params['id'];
@@ -43,7 +47,7 @@
 							<BrandMark />
 							<span class="flex min-w-0 flex-col leading-tight">
 								<span class="truncate text-sm font-semibold">svelteRedisAdmin</span>
-								<span class="truncate text-xs text-muted-foreground">Redis web admin</span>
+								<span class="truncate text-xs text-muted-foreground">{t('Redis web admin')}</span>
 							</span>
 						</a>
 					{/snippet}
@@ -54,7 +58,7 @@
 
 	<Sidebar.Content>
 		<Sidebar.Group>
-			<Sidebar.GroupLabel>Servers</Sidebar.GroupLabel>
+			<Sidebar.GroupLabel>{t('Servers')}</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each servers as server (server.index)}
@@ -75,7 +79,7 @@
 
 		{#if current}
 			<Sidebar.Group>
-				<Sidebar.GroupLabel>Databases</Sidebar.GroupLabel>
+				<Sidebar.GroupLabel>{t('Databases')}</Sidebar.GroupLabel>
 				<Sidebar.GroupContent>
 					<Sidebar.Menu>
 						{#each databases as db (db)}

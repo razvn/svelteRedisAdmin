@@ -4,9 +4,10 @@ import { serverHost } from '#lib/nav/paths.ts';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = ({ locals }) => {
+	const t = locals.i18n.t;
 	if (locals.configError) error(500, locals.configError);
 	const session = locals.session;
-	if (!session) error(401, 'Not signed in');
+	if (!session) error(401, t('Not signed in'));
 
 	const servers = locals.config.Servers.map((server, index) => ({
 		index,
@@ -25,7 +26,7 @@ export const load: LayoutServerLoad = ({ locals }) => {
 		topbar: {
 			user: session.username,
 			host: activeIndex === null ? '' : serverHost(locals.config.Servers[activeIndex]),
-			serverLabel: activeIndex === null ? 'All servers' : servers[activeIndex].label,
+			serverLabel: activeIndex === null ? t('All servers') : servers[activeIndex].label,
 			serverIndex: activeIndex ?? 0,
 			canLogout: locals.authRequired
 		}

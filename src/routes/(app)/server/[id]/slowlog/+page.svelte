@@ -13,25 +13,29 @@
 	import { SERVER_TABS, tabSubPath, type TabDef } from '#lib/nav/tabs.ts';
 	import { serverTabHref } from '#lib/nav/paths.ts';
 	import { formatMicros, formatNumber, formatSeconds } from '#lib/format.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
+
 	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
 </script>
 
-<svelte:head><title>Slow log - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
+<svelte:head><title>{t('Slow log')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-slowlog">
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
-	<TabBar label="Server" tabs={SERVER_TABS} current={tabSubPath('slowlog')} {hrefFor} />
-	<PageHeader title="Slow log" description="SLOWLOG GET — slowest commands" icon={Clock}>
+	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('slowlog')} {hrefFor} />
+	<PageHeader title={t('Slow log')} description={t('SLOWLOG GET — slowest commands')} icon={Clock}>
 		{#snippet actions()}
 			<form method="POST" action="?/reset">
 				<input type="hidden" name="confirm" value="1" />
 				<Button type="submit" variant="destructive">
 					<Trash2 />
-					Reset slow log
+					{t('Reset slow log')}
 				</Button>
 			</form>
 		{/snippet}
@@ -45,29 +49,29 @@
 
 	<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 		<StatCard
-			label="Entries"
+			label={t('Entries')}
 			value={formatNumber(data.length)}
 			icon={Clock}
 			tone="info"
-			hint={`${data.entries.length} shown`}
+			hint={t('{n} shown', { n: data.entries.length })}
 		/>
 	</div>
 
 	<Card.Root class="gap-0 py-0">
 		<Card.Header class="border-b py-5">
-			<Card.Title>Slowest commands</Card.Title>
-			<Card.Description>Most recent 100 entries.</Card.Description>
+			<Card.Title>{t('Slowest commands')}</Card.Title>
+			<Card.Description>{t('Most recent 100 entries.')}</Card.Description>
 		</Card.Header>
 		<Card.Content class="px-0">
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Id</Table.Head>
-						<Table.Head>Timestamp</Table.Head>
-						<Table.Head class="text-end">Duration</Table.Head>
-						<Table.Head>Command</Table.Head>
-						<Table.Head>Client</Table.Head>
-						<Table.Head>Name</Table.Head>
+						<Table.Head>{t('Id')}</Table.Head>
+						<Table.Head>{t('Timestamp')}</Table.Head>
+						<Table.Head class="text-end">{t('Duration')}</Table.Head>
+						<Table.Head>{t('Command')}</Table.Head>
+						<Table.Head>{t('Client')}</Table.Head>
+						<Table.Head>{t('Name')}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
@@ -77,7 +81,7 @@
 							<Table.Cell>
 								<span class="tabular-nums">{entry.timestamp}</span>
 								<span class="block text-xs text-muted-foreground">
-									{formatSeconds(entry.ageSeconds)} ago
+									{t('{ago} ago', { ago: formatSeconds(entry.ageSeconds) })}
 								</span>
 							</Table.Cell>
 							<Table.Cell class="text-end tabular-nums">
@@ -94,7 +98,7 @@
 					{:else}
 						<Table.Row>
 							<Table.Cell colspan={6} class="text-muted-foreground">
-								The slow log is empty.
+								{t('The slow log is empty.')}
 							</Table.Cell>
 						</Table.Row>
 					{/each}

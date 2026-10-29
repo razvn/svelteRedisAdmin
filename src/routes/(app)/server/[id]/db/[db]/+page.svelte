@@ -35,9 +35,13 @@
 	import { resolve } from '$app/paths';
 	import { bare, dbHref, dbTabHref, keyHref } from '#lib/nav/paths.ts';
 	import { DB_TABS, tabSubPath } from '#lib/nav/tabs.ts';
+	import { useI18n } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	const i18n = useI18n();
+	const t = $derived(i18n.t);
 
 	let selectedCount = $state(0);
 
@@ -106,37 +110,42 @@
 	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
 
 	<TabBar
-		label="Database"
+		label={t('Database')}
 		tabs={DB_TABS}
 		current=""
 		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader
-		title="Keys in db{data.db}"
-		description="SCAN listing — use the filter to find keys fast"
+		title={t('Keys in db{db}', { db: data.db })}
+		description={t('SCAN listing — use the filter to find keys fast')}
 		icon={ListTree}
 	>
 		{#snippet actions()}
 			<Button href={dbTabHref(data.serverIndex, data.db, 'new-key')} size="sm">
 				<Plus />
-				New key
+				{t('New key')}
 			</Button>
 		{/snippet}
 	</PageHeader>
 
 	<div class="grid gap-4 sm:grid-cols-3">
-		<StatCard label="Total keys" value={formatNumber(data.dbsize)} icon={Database} tone="primary" />
 		<StatCard
-			label="Shown"
+			label={t('Total keys')}
+			value={formatNumber(data.dbsize)}
+			icon={Database}
+			tone="primary"
+		/>
+		<StatCard
+			label={t('Shown')}
 			value={formatNumber(data.keys.length)}
 			icon={List}
 			tone="info"
-			hint={data.filter ? `filter ${data.filter}` : undefined}
+			hint={data.filter ? t('filter {filter}', { filter: data.filter }) : undefined}
 		/>
 		<StatCard
-			label="Next cursor"
-			value={data.cursor === 0 ? 'end' : data.cursor}
+			label={t('Next cursor')}
+			value={data.cursor === 0 ? t('end') : data.cursor}
 			icon={RefreshCw}
 			tone="warning"
 		/>
@@ -153,18 +162,18 @@
 					<Input
 						name="filter"
 						value={data.filter}
-						placeholder="pattern, e.g. app:*"
-						aria-label="Key filter"
+						placeholder={t('pattern, e.g. app:*')}
+						aria-label={t('Key filter')}
 						class="w-56"
 					/>
-					<NativeSelect name="type" aria-label="Key type">
-						<option value="">All types</option>
+					<NativeSelect name="type" aria-label={t('Key type')}>
+						<option value="">{t('All types')}</option>
 						{#each KEY_TYPES as option (option)}
 							<option value={option} selected={data.type === option}>{option}</option>
 						{/each}
 					</NativeSelect>
 					<input type="hidden" name="view" value={data.view} />
-					<Button type="submit" variant="outline" size="sm">Apply</Button>
+					<Button type="submit" variant="outline" size="sm">{t('Apply')}</Button>
 					<Button
 						variant="ghost"
 						size="sm"
@@ -173,11 +182,11 @@
 							view: data.view
 						})}
 					>
-						Clear
+						{t('Clear')}
 					</Button>
 				</form>
 
-				<div class="flex items-center gap-1" role="group" aria-label="Browser view">
+				<div class="flex items-center gap-1" role="group" aria-label={t('Browser view')}>
 					<Button
 						href={viewHref('list')}
 						variant={data.view === 'list' ? 'default' : 'ghost'}
@@ -185,7 +194,7 @@
 						aria-pressed={data.view === 'list'}
 					>
 						<List />
-						List
+						{t('List')}
 					</Button>
 					<Button
 						href={viewHref('tree')}
@@ -194,7 +203,7 @@
 						aria-pressed={data.view === 'tree'}
 					>
 						<ListTree />
-						Tree
+						{t('Tree')}
 					</Button>
 				</div>
 			</div>
@@ -206,21 +215,24 @@
 						{#snippet child({ props })}
 							<Button {...props} variant="destructive" size="sm">
 								<Trash2 />
-								Flush db{data.db}
+								{t('Flush db{db}', { db: data.db })}
 							</Button>
 						{/snippet}
 					</AlertDialog.Trigger>
 					<AlertDialog.Content>
 						<AlertDialog.Header>
-							<AlertDialog.Title>Flush db{data.db}?</AlertDialog.Title>
+							<AlertDialog.Title>{t('Flush db{db}?', { db: data.db })}</AlertDialog.Title>
 							<AlertDialog.Description>
-								This deletes every key in database {data.db} on {data.label}. This cannot be undone.
+								{t('This deletes every key in database {db} on {label}. This cannot be undone.', {
+									db: data.db,
+									label: data.label
+								})}
 							</AlertDialog.Description>
 						</AlertDialog.Header>
 						<AlertDialog.Footer>
-							<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+							<AlertDialog.Cancel>{t('Cancel')}</AlertDialog.Cancel>
 							<AlertDialog.Action variant="destructive" type="submit" form="flush-form">
-								Flush db{data.db}
+								{t('Flush db{db}', { db: data.db })}
 							</AlertDialog.Action>
 						</AlertDialog.Footer>
 					</AlertDialog.Content>
@@ -233,8 +245,9 @@
 				<div class="p-2" data-testid="key-tree">
 					{#if data.keys.length === 0}
 						<p class="p-10 text-center text-sm text-muted-foreground">
-							No keys match {data.filter ? `“${data.filter}”` : 'this database'} — SCAN walked to the
-							end of the keyspace.
+							{t('No keys match {target} — SCAN walked to the end of the keyspace.', {
+								target: data.filter ? `“${data.filter}”` : t('this database')
+							})}
 						</p>
 					{:else}
 						{#each treeRows as { node, depth } (node.name)}
@@ -249,7 +262,9 @@
 										variant="ghost"
 										size="icon-xs"
 										aria-expanded={isExpanded}
-										aria-label="{isExpanded ? 'Collapse' : 'Expand'} {node.name}"
+										aria-label={t(isExpanded ? 'Collapse {name}' : 'Expand {name}', {
+											name: node.name
+										})}
 										onclick={() => toggleNode(node.name)}
 									>
 										{#if isExpanded}
@@ -286,11 +301,11 @@
 											</a>
 										{:else}
 											<span class="truncate font-mono text-muted-foreground">{keyText}</span>
-											<Badge variant="muted">binary name</Badge>
+											<Badge variant="muted">{t('binary name')}</Badge>
 										{/if}
 										{#if item && pill}
 											<Badge variant={keyTypeVariant(item.type)}>{item.type}</Badge>
-											<Badge variant={pill.variant}>{pill.label}</Badge>
+											<Badge variant={pill.variant}>{t(pill.label)}</Badge>
 										{/if}
 									</div>
 								{/each}
@@ -302,8 +317,9 @@
 				<form method="POST" action="?/delete" onchange={countSelected}>
 					{#if data.keys.length === 0}
 						<p class="p-10 text-center text-sm text-muted-foreground">
-							No keys match {data.filter ? `“${data.filter}”` : 'this database'} — SCAN walked to the
-							end of the keyspace.
+							{t('No keys match {target} — SCAN walked to the end of the keyspace.', {
+								target: data.filter ? `“${data.filter}”` : t('this database')
+							})}
 						</p>
 					{:else}
 						<Table.Root>
@@ -313,13 +329,13 @@
 										<input
 											type="checkbox"
 											class="size-4 accent-primary"
-											aria-label="Select all keys on this page"
+											aria-label={t('Select all keys on this page')}
 											onclick={toggleAll}
 										/>
 									</Table.Head>
-									<Table.Head>Key</Table.Head>
-									<Table.Head class="w-24">Type</Table.Head>
-									<Table.Head class="w-36">TTL</Table.Head>
+									<Table.Head>{t('Key')}</Table.Head>
+									<Table.Head class="w-24">{t('Type')}</Table.Head>
+									<Table.Head class="w-36">{t('TTL')}</Table.Head>
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
@@ -333,7 +349,7 @@
 												name="keys"
 												value={wireFormValue(item.key)}
 												class="size-4 accent-primary"
-												aria-label="Select {keyText}"
+												aria-label={t('Select {key}', { key: keyText })}
 											/>
 										</Table.Cell>
 										<Table.Cell class="max-w-0">
@@ -347,14 +363,14 @@
 											{:else}
 												<span class="block truncate font-mono text-muted-foreground">{keyText}</span
 												>
-												<Badge variant="muted" class="mt-1">binary name</Badge>
+												<Badge variant="muted" class="mt-1">{t('binary name')}</Badge>
 											{/if}
 										</Table.Cell>
 										<Table.Cell>
 											<Badge variant={keyTypeVariant(item.type)}>{item.type}</Badge>
 										</Table.Cell>
 										<Table.Cell>
-											<Badge variant={pill.variant}>{pill.label}</Badge>
+											<Badge variant={pill.variant}>{t(pill.label)}</Badge>
 										</Table.Cell>
 									</Table.Row>
 								{/each}
@@ -367,10 +383,12 @@
 					<input type="hidden" name="view" value={data.view} />
 					{#if data.keys.length > 0}
 						<div class="flex items-center justify-between border-t p-5">
-							<span class="text-sm text-muted-foreground">{selectedCount} selected</span>
+							<span class="text-sm text-muted-foreground">
+								{t('{n} selected', { n: selectedCount })}
+							</span>
 							<Button type="submit" variant="destructive" size="sm" disabled={selectedCount === 0}>
 								<Trash2 />
-								Delete selected
+								{t('Delete selected')}
 							</Button>
 						</div>
 					{/if}
@@ -380,13 +398,15 @@
 			<div class="flex items-center justify-between border-t p-5">
 				<Button href={prevHref} disabled={data.isFirstPage} variant="outline" size="sm">
 					<ChevronLeft />
-					Previous page
+					{t('Previous page')}
 				</Button>
 				<span class="text-sm text-muted-foreground">
-					next cursor: {data.cursor === 0 ? 'end' : data.cursor}
+					{t('next cursor: {cursor}', {
+						cursor: data.cursor === 0 ? t('end') : data.cursor
+					})}
 				</span>
 				<Button href={nextHref} disabled={data.cursor === 0} variant="outline" size="sm">
-					Next page
+					{t('Next page')}
 					<ChevronRight />
 				</Button>
 			</div>

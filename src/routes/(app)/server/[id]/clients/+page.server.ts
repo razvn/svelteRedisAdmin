@@ -9,7 +9,7 @@ const killSchema = z.object({
 });
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.server) error(404, 'Server not found');
+	if (!locals.server) error(404, locals.i18n.t('Server not found'));
 	const client = await locals.redis();
 
 	const clients = await listClients(client);
@@ -24,19 +24,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	kill: async ({ request, locals }) => {
-		if (!locals.server) error(404, 'Server not found');
+		const t = locals.i18n.t;
+		if (!locals.server) error(404, t('Server not found'));
 
 		const raw = await request.formData();
 		const parsed = killSchema.safeParse({ id: raw.get('id') });
 		if (!parsed.success) {
-			return fail(400, { error: 'Invalid client id.' });
+			return fail(400, { error: t('Invalid client id.') });
 		}
 
 		try {
 			const client = await locals.redis();
 			await killClient(client, parsed.data.id);
 		} catch {
-			return fail(400, { error: `CLIENT KILL failed for id ${parsed.data.id}.` });
+			return fail(400, { error: t('CLIENT KILL failed for id {id}.', { id: parsed.data.id }) });
 		}
 
 		redirect(303, `/server/${locals.serverIndex ?? 0}/clients`);
