@@ -57,6 +57,24 @@ config.sample.json         committed sample; config.json is git-ignored (overrid
   Style only with theme tokens (`bg-background`, `text-foreground`, `text-muted-foreground`, `border`,
   `bg-primary`, ...), never raw colours. Light/dark/system via `mode-watcher` (`ModeWatcher` in the root layout).
 
+## i18n
+
+gettext-style, hand-rolled in `src/lib/i18n/` (mirrors svelteMyAdmin): **msgids are the English source
+strings**; translations live in flat JSON catalogs at `src/lib/i18n/locales/<lang>/<area>.json`
+(`fr`, `es` today). English never needs a catalog. Adding a language = one line in
+`languages.ts` + one catalog folder.
+
+- **Client components**: `const i18n = useI18n(); const t = $derived(i18n.t);` then `{t("Delete")}`.
+  `$derived` is required (a plain const breaks reactivity on language switch).
+- **Server loads/actions**: `const t = locals.i18n.t;` (`locals.i18n` is set in `hooks.server.ts` from the
+  `sra_lang` cookie, then `Accept-Language`, then `en`). Return translated strings in page data.
+- Params interpolate as `{name}`; plurals via `t("{n} key", "{n} keys", n)` and catalog arrays in CLDR
+  category order. HTML-bearing strings use `{@html i18n.t('... <code>...</code> ...')}` — never with
+  user data.
+- Language switch: `POST /api/lang` sets the cookie, then `refreshAll()` (`setLanguage()` in
+  `#lib/i18n/switch.ts`); the top-bar language dropdown does this.
+- `data-testid` values stay English literals; user-visible `aria-label`s are translated.
+
 ## UI design
 
 The look (grey canvas, white rounded cards, indigo primary, soft status pills) is specified in
