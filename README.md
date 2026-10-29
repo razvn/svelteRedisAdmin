@@ -45,3 +45,7 @@ pnpm test:e2e       # needs `pnpm db:up`
 
 See `docs/ROADMAP.md` (architecture, phases) and `docs/DESIGN.md` (UI conventions).
 `AGENTS.md` holds the conventions for implementer agents.
+
+## License
+
+GPL-2.0-or-later — see [LICENSE](LICENSE).
