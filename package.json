@@ -16,6 +16,7 @@
 		"test:unit": "vitest run --project unit",
 		"test": "vitest run --project unit --project client",
 		"test:e2e": "playwright test",
+		"site:screenshots": "node scripts/site/capture-screenshots.mjs",
 		"test:client": "vitest run --project client",
 		"test:integration": "vitest run --project integration",
 		"db:up": "docker compose up -d --wait redis1 redis2",

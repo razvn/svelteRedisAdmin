@@ -46,6 +46,16 @@ pnpm test:e2e       # needs `pnpm db:up`
 See `docs/ROADMAP.md` (architecture, phases) and `docs/DESIGN.md` (UI conventions).
 `AGENTS.md` holds the conventions for implementer agents.
 
+## Presentation site
+
+`site/` holds the static landing page, deployed to **GitHub Pages** automatically on every push to
+`main` that touches `site/` (see `.github/workflows/pages.yml`). To regenerate the screenshots:
+
+```sh
+pnpm db:up && pnpm dev --port 5173   # in one terminal
+pnpm site:screenshots                # in another — writes site/assets/screenshots/*.png
+```
+
 ## License
 
 GPL-2.0-or-later — see [LICENSE](LICENSE).

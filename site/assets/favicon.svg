@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="svelteRedisAdmin">
+	<defs>
+		<linearGradient id="f-bg" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#6366F1" />
+			<stop offset="1" stop-color="#7C3AED" />
+		</linearGradient>
+		<linearGradient id="f-ribbon" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#FF5A47" />
+			<stop offset="1" stop-color="#C81E12" />
+		</linearGradient>
+	</defs>
+	<rect width="64" height="64" rx="15" fill="url(#f-bg)" />
+
+	<!-- Redis-style stack, high contrast for tiny sizes -->
+	<path d="M32 32.5 49.5 40.5 32 48.5 14.5 40.5Z" fill="#fff" fill-opacity=".55" />
+	<path d="M32 24.5 49.5 32.5 32 40.5 14.5 32.5Z" fill="#fff" fill-opacity=".8" />
+	<path d="M32 16.5 49.5 24.5 32 32.5 14.5 24.5Z" fill="#fff" />
+
+	<!-- svelte S in Redis red, thick enough to read at 16 px -->
+	<path
+		d="M25.5 12C21 15.6 22.6 19.8 29 22.7l9.4 4.4c7.8 3.6 8.2 10.1 1 13.9C34.7 43.5 25 45.5 16.5 50"
+		fill="none"
+		stroke="url(#f-ribbon)"
+		stroke-width="9"
+		stroke-linecap="round"
+	/>
+</svg>
