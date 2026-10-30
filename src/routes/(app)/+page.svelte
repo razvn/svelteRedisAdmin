@@ -53,7 +53,8 @@
 				</Card.Header>
 				<Card.Content class="flex flex-col gap-4 p-5">
 					{#if server.online}
-						<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+						<!-- 2 columns max: the card itself is half-width, 4 would squeeze the stat cards -->
+						<div class="grid gap-4 sm:grid-cols-2">
 							<StatCard
 								label={t('Version')}
 								value={server.version ?? '—'}
