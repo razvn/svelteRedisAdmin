@@ -11,12 +11,21 @@
 	</defs>
 	<rect width="64" height="64" rx="15" fill="url(#f-bg)" />
 
+	<!-- S, back part: top curve of the S, running behind the stack -->
+	<path
+		d="M50.5 10.8c-6-3.4-19-3.4-24.5 1.2"
+		fill="none"
+		stroke="url(#f-ribbon)"
+		stroke-width="9"
+		stroke-linecap="round"
+	/>
+
 	<!-- Redis-style stack, high contrast for tiny sizes -->
 	<path d="M32 32.5 49.5 40.5 32 48.5 14.5 40.5Z" fill="#fff" fill-opacity=".55" />
 	<path d="M32 24.5 49.5 32.5 32 40.5 14.5 32.5Z" fill="#fff" fill-opacity=".8" />
 	<path d="M32 16.5 49.5 24.5 32 32.5 14.5 24.5Z" fill="#fff" />
 
-	<!-- svelte S in Redis red, thick enough to read at 16 px -->
+	<!-- svelte S, front part, in Redis red, thick enough to read at 16 px -->
 	<path
 		d="M25.5 12C21 15.6 22.6 19.8 29 22.7l9.4 4.4c7.8 3.6 8.2 10.1 1 13.9C34.7 43.5 25 45.5 16.5 50"
 		fill="none"

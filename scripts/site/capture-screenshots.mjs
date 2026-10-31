@@ -47,13 +47,18 @@ for (const scheme of ['light', 'dark']) {
 	}, scheme);
 	const page = await context.newPage();
 
-	// Log in once through the form; the session cookie then covers the authed views.
+	// Capture the login page first: unauthenticated, before the session cookie exists.
 	await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
 	const onLogin = await page
 		.getByRole('button', { name: 'Sign in' })
 		.isVisible()
 		.catch(() => false);
 	if (onLogin) {
+		await page.evaluate(() => document.fonts.ready);
+		await page.waitForTimeout(500);
+		await page.screenshot({ path: join(OUT, `login-${scheme}.png`), type: 'png' });
+		console.log(`login-${scheme}.png`);
+		// Then log in through the form; the session cookie covers the authed views.
 		await page.getByLabel('Username').fill(USER);
 		await page.getByLabel('Password').fill(PASSWORD);
 		await page.getByRole('button', { name: 'Sign in' }).click();
@@ -62,6 +67,7 @@ for (const scheme of ['light', 'dark']) {
 	await context.addCookies([{ name: 'sra_lang', value: 'en', url: BASE }]);
 
 	for (const view of views) {
+		if (view.name === 'login') continue; // captured above, pre-login
 		await page.goto(`${BASE}${view.path}`, { waitUntil: 'networkidle' });
 		await page.evaluate(() => document.fonts.ready);
 		await page.waitForTimeout(500);
