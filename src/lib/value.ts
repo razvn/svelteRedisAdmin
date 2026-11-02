@@ -7,7 +7,8 @@ export type WireValue = { kind: 'text'; text: string } | { kind: 'binary'; base6
 
 /** Decode bytes into a WireValue: valid UTF-8 stays text, everything else is base64. */
 export function toWireValue(bytes: Uint8Array): WireValue {
-	const decoder = new TextDecoder('utf-8', { fatal: true });
+	// ignoreBOM keeps a leading EF BB BF as U+FEFF; by default TextDecoder strips it and the bytes are lost.
+	const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 	try {
 		return { kind: 'text', text: decoder.decode(bytes) };
 	} catch {

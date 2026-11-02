@@ -2,6 +2,7 @@ import { createConnection, connectionErrorLabel } from '#lib/server/redis/connec
 import { getServerInfo, infoValue } from '#lib/server/redis/server.ts';
 import type { ServerConfig } from '#lib/server/config/schema.ts';
 import { serverName } from '#lib/server/config/schema.ts';
+import { canAccessServer } from '#lib/server/auth/access.ts';
 import type { PageServerLoad } from './$types';
 
 export interface ServerSummary {
@@ -37,8 +38,12 @@ async function probe(server: ServerConfig): Promise<Partial<ServerSummary>> {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
+	// Hidden servers are neither listed nor probed (same rule as the sidebar and assertServerAccess).
+	const visible = locals.config.Servers.map((server, index) => ({ server, index })).filter(
+		({ index }) => canAccessServer(locals.session, index)
+	);
 	const summaries: ServerSummary[] = await Promise.all(
-		locals.config.Servers.map(async (server, index) => {
+		visible.map(async ({ server, index }) => {
 			const base: ServerSummary = { index, label: serverName(server), online: false };
 			try {
 				return { ...base, online: true, ...(await probe(server)) };

@@ -6,6 +6,12 @@ describe('toWireValue', () => {
 		expect(toWireValue(Buffer.from('héllo ✓', 'utf8'))).toEqual({ kind: 'text', text: 'héllo ✓' });
 	});
 
+	test('keeps a leading UTF-8 BOM', () => {
+		const bytes = Buffer.from([0xef, 0xbb, 0xbf, 0x61]);
+		expect(toWireValue(bytes)).toEqual({ kind: 'text', text: '﻿a' });
+		expect(fromWireValue(toWireValue(bytes)).equals(bytes)).toBe(true);
+	});
+
 	test('tags invalid UTF-8 as base64', () => {
 		const bytes = Uint8Array.of(0xff, 0xfe, 0x00, 0x01);
 		const value = toWireValue(bytes);
