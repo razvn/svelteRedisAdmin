@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# Launch, check, drive and tear down a disposable svelteRedisAdmin instance for verification.
+# Usage: sra-verify up [RUN_ID] | doctor RUN_ID | drive RUN_ID JOURNEY [USER] | down RUN_ID | list
+# State and evidence live in <repo>/.verify/runs/<RUN_ID>/ (git-ignored).
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$SKILL_DIR/../../.." && pwd)"
+RUNS="$REPO/.verify/runs"
+VERIFY_DB=5
+
+die() { echo "sra-verify: $*" >&2; exit 1; }
+run_dir() { [ -n "${1:-}" ] || die "missing RUN_ID"; echo "$RUNS/$1"; }
+load() {
+	local dir; dir="$(run_dir "$1")"
+	[ -f "$dir/state.env" ] || die "no run '$1' (expected $dir/state.env)"
+	# shellcheck disable=SC1091
+	. "$dir/state.env"
+}
+redis_up() { docker exec "$1" redis-cli ping 2>/dev/null | grep -q PONG; }
+alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
+
+cmd_up() {
+	local id="${1:-$(date +%Y%m%d-%H%M%S)-$$}"
+	local dir; dir="$(run_dir "$id")"
+	[ -e "$dir/state.env" ] && die "run '$id' already exists"
+	mkdir -p "$dir/evidence"
+
+	# Redis: shared dev containers (fixed names/ports). Start them only if needed and remember it.
+	local started_db=0
+	if ! redis_up sra-redis1 || ! redis_up sra-redis2; then
+		(cd "$REPO" && docker compose up -d --wait redis1 redis2) >"$dir/db.log" 2>&1 || die "redis failed to start, see $dir/db.log"
+		started_db=1
+	fi
+
+	# Production build served by `vite preview`, the same path as playwright.config.ts. (Plain
+	# `node build` is unusable over http: adapter-node 6 has no ORIGIN env and assumes https, so every
+	# form POST fails the CSRF check.) A rebuild replaces the code under every live run.
+	if [ "${SRA_VERIFY_SKIP_BUILD:-0}" != 1 ] || [ ! -d "$REPO/.svelte-kit/output" ]; then
+		(cd "$REPO" && pnpm build) >"$dir/build.log" 2>&1 || die "pnpm build failed, see $dir/build.log"
+	fi
+	local rev; rev="$(git -C "$REPO" rev-parse --short HEAD)$(git -C "$REPO" diff --quiet HEAD -- src || echo '+dirty')"
+
+	# Own config: never depends on the user's git-ignored config.json.
+	cat >"$dir/config.json" <<EOF
+{
+	"Servers": [
+		{ "name": "Verify redis1", "host": "127.0.0.1", "port": 33380, "db": 0, "databases": 16, "separator": ":" },
+		{ "name": "Verify redis2", "host": "127.0.0.1", "port": 33381, "db": 0, "databases": 16, "separator": ":" }
+	],
+	"login": [
+		{ "username": "admin", "password": "admin", "role": "admin" },
+		{ "username": "writer", "password": "writer", "role": "rw", "servers": [0] },
+		{ "username": "viewer", "password": "viewer", "role": "ro" }
+	],
+	"auth": { "plugin": "config" },
+	"cookieSecret": "verify-$(openssl rand -hex 16)",
+	"maxKeyListSize": 100,
+	"maxValueLength": 8192
+}
+EOF
+
+	local port; port="$(node -e "const s=require('net').createServer().listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})")"
+	cd "$REPO"
+	SRA_CONFIG="$dir/config.json" nohup node node_modules/vite/bin/vite.js preview \
+		--host 127.0.0.1 --port "$port" --strictPort >"$dir/app.log" 2>&1 &
+	local pid=$!
+
+	cat >"$dir/state.env" <<EOF
+RUN_ID=$id
+URL=http://127.0.0.1:$port
+PORT=$port
+PID=$pid
+BUILD_REV=$rev
+STARTED_DB=$started_db
+VERIFY_DB=$VERIFY_DB
+KEY_PREFIX=sra_verify:$id:
+EOF
+
+	# Ready = the login page renders (the server loaded config and routes), not just an open port.
+	for _ in $(seq 1 60); do
+		if curl -fsS "http://127.0.0.1:$port/login" 2>/dev/null | grep -q 'data-testid="login-form"'; then
+			echo "RUN_ID=$id"
+			echo "URL=http://127.0.0.1:$port"
+			echo "EVIDENCE=$dir/evidence"
+			return 0
+		fi
+		alive "$pid" || die "app exited during startup, see $dir/app.log"
+		sleep 1
+	done
+	die "app not ready after 60s, see $dir/app.log"
+}
+
+cmd_doctor() {
+	load "$1"
+	local ok=1 cur
+	alive "$PID" && echo "ok   process $PID alive" || { echo "FAIL process $PID not running"; ok=0; }
+	if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null | grep -qx "$PID"; then echo "ok   port $PORT owned by $PID"; else echo "FAIL port $PORT not owned by $PID"; ok=0; fi
+	if curl -fsS "$URL/login" 2>/dev/null | grep -q 'data-testid="login-form"'; then echo "ok   $URL/login renders"; else echo "FAIL $URL/login does not render"; ok=0; fi
+	# Without a text/html Accept header SvelteKit answers a form action with JSON: {"type":"redirect",...}.
+	local reply; reply="$(curl -s -X POST "$URL/login" -H "Origin: $URL" --data-urlencode username=admin --data-urlencode password=admin)"
+	case "$reply" in *'"type":"redirect"'*) echo "ok   admin login accepted" ;; *) echo "FAIL admin login: $reply"; ok=0 ;; esac
+	for c in sra-redis1 sra-redis2; do redis_up "$c" && echo "ok   $c PONG" || { echo "FAIL $c not answering"; ok=0; }; done
+	cur="$(git -C "$REPO" rev-parse --short HEAD)$(git -C "$REPO" diff --quiet HEAD -- src || echo '+dirty')"
+	[ "$cur" = "$BUILD_REV" ] && echo "ok   build $BUILD_REV matches checkout" || echo "WARN build $BUILD_REV, checkout now $cur (rebuild: down + up)"
+	[ "$ok" = 1 ] || exit 1
+}
+
+cmd_drive() {
+	load "$1"
+	[ -n "${2:-}" ] || die "missing JOURNEY (name in journeys/ or path)"
+	local journey="$2"
+	[ -f "$journey" ] || journey="$SKILL_DIR/journeys/$2.mjs"
+	[ -f "$journey" ] || die "journey not found: $2"
+	(cd "$REPO" && node "$SKILL_DIR/lib/drive.mjs" "$RUNS/$1" "$journey" "${3:-admin}")
+}
+
+cmd_down() {
+	load "$1"
+	local dir; dir="$(run_dir "$1")"
+	if alive "$PID"; then kill "$PID"; for _ in $(seq 1 10); do alive "$PID" || break; sleep 0.5; done; alive "$PID" && kill -9 "$PID"; fi
+	# Remove only this run's keys.
+	if redis_up sra-redis1; then
+		docker exec sra-redis1 sh -c "redis-cli -n $VERIFY_DB --scan --pattern '${KEY_PREFIX}*' | xargs -r redis-cli -n $VERIFY_DB del" >/dev/null
+	fi
+	# Stop Redis only if this run started it and no other live run still uses it.
+	if [ "$STARTED_DB" = 1 ]; then
+		local other=0 f
+		for f in "$RUNS"/*/state.env; do
+			[ "$f" = "$dir/state.env" ] && continue
+			[ -f "$f" ] && alive "$(sed -n 's/^PID=//p' "$f")" && other=1
+		done
+		[ "$other" = 0 ] && (cd "$REPO" && docker compose stop redis1 redis2 >/dev/null 2>&1) || true
+	fi
+	rm -f "$dir/config.json"
+	mv "$dir/state.env" "$dir/state.done.env"
+	echo "stopped $1; evidence kept in $dir/evidence"
+}
+
+cmd_list() {
+	local f
+	for f in "$RUNS"/*/state.env; do
+		[ -f "$f" ] || continue
+		( . "$f"; alive "$PID" && s=live || s=dead; echo "$RUN_ID $URL $s" )
+	done
+}
+
+case "${1:-}" in
+	up) cmd_up "${2:-}" ;;
+	doctor) cmd_doctor "${2:-}" ;;
+	drive) cmd_drive "${2:-}" "${3:-}" "${4:-}" ;;
+	down) cmd_down "${2:-}" ;;
+	list) cmd_list ;;
+	*) sed -n '2,4p' "$0"; exit 2 ;;
+esac
