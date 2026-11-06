@@ -5,7 +5,8 @@ import type { AuthPlugin, PluginSession } from './types.ts';
 /** Parse an `Authorization: Basic …` header against the login list. */
 export function loginFromBasicAuth(
 	config: { login?: LoginConfig[] },
-	authorization: string | null
+	authorization: string | null,
+	deny?: (claimedUser: string) => void
 ): PluginSession | null {
 	if (!authorization) return null;
 	const separator = authorization.indexOf(' ');
@@ -22,14 +23,19 @@ export function loginFromBasicAuth(
 	const colon = decoded.indexOf(':');
 	if (colon === -1) return null;
 	const entry = verifyLogin(config, decoded.slice(0, colon), decoded.slice(colon + 1));
-	if (!entry) return null;
+	if (!entry) {
+		deny?.(decoded.slice(0, colon));
+		return null;
+	}
 	return { username: entry.username, role: entry.role, servers: entry.servers ?? null };
 }
 
 /** The `http` plugin: HTTP Basic against the `login` list, no login page. */
 export const httpPlugin: AuthPlugin = {
 	name: 'http',
-	async authenticate({ request, config }): Promise<PluginSession | null> {
-		return loginFromBasicAuth(config, request.headers.get('authorization'));
+	async authenticate({ request, config, deny }): Promise<PluginSession | null> {
+		return loginFromBasicAuth(config, request.headers.get('authorization'), (user) =>
+			deny?.('access-denied', user)
+		);
 	}
 };

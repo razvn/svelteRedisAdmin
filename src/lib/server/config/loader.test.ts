@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { ConfigError, parseConfig } from './loader.ts';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ConfigError, loadConfig, parseConfig } from './loader.ts';
 
 describe('parseConfig', () => {
 	test('fills defaults for a minimal servers list', () => {
@@ -179,5 +182,40 @@ describe('parseConfig', () => {
 	test('rejects non-object input', () => {
 		expect(() => parseConfig(null)).toThrow(ConfigError);
 		expect(() => parseConfig('nope')).toThrow(ConfigError);
+	});
+});
+
+describe('AuditLog', () => {
+	test('is off by default and has defaults when set', () => {
+		expect(parseConfig({ Servers: [{}] }).AuditLog).toBeUndefined();
+		expect(parseConfig({ Servers: [{}], AuditLog: { target: 'stdout' } }).AuditLog).toEqual({
+			target: 'stdout',
+			includeValues: false,
+			sessionIdleMinutes: 30,
+			maxArgLength: 1024
+		});
+	});
+
+	test('needs a path for the file target', () => {
+		expect(() => parseConfig({ Servers: [{}], AuditLog: { target: 'file' } })).toThrow(
+			/AuditLog\.path/
+		);
+		expect(() => parseConfig({ Servers: [{}], AuditLog: { target: 'syslog' } })).toThrow(
+			ConfigError
+		);
+	});
+
+	test('a relative file path resolves from the directory of the config file', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'sra-config-'));
+		try {
+			const file = join(dir, 'config.json');
+			await writeFile(
+				file,
+				JSON.stringify({ Servers: [{}], AuditLog: { target: 'file', path: 'var/audit.jsonl' } })
+			);
+			expect(loadConfig(file).AuditLog).toMatchObject({ path: join(dir, 'var/audit.jsonl') });
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
 	});
 });

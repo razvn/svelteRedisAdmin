@@ -60,7 +60,8 @@ metadata:
 data:
   # trustedProxies: 127.0.0.1 and ::1 only trust `kubectl port-forward` (local try-out). Behind a real
   # SSO proxy, put the proxy pods' addresses here instead, and change cookieSecret (better: mount the
-  # config from a Secret).
+  # config from a Secret). AuditLog writes one JSON line per action to stdout (`kubectl logs`), see
+  # docs/AUDIT.md.
   config.json: |
     {
       "Servers": [],
@@ -78,7 +79,8 @@ data:
         "name": "{namespace}: {annotation:gitlab.com/mr-title}",
         "secret": { "name": "redis-auth", "passwordKey": "redis-password" },
         "authorize": { "userPrefix": "oidc:", "groupsPrefix": "oidc:" }
-      }
+      },
+      "AuditLog": { "target": "stdout" }
     }
 ---
 apiVersion: apps/v1

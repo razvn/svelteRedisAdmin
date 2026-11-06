@@ -32,12 +32,20 @@ function groupsFromHeader(value: string | null): string[] {
  */
 export const headerPlugin: AuthPlugin = {
 	name: 'header',
-	async authenticate({ request, config, peerAddress }): Promise<PluginSession | null> {
+	async authenticate({ request, config, peerAddress, deny }): Promise<PluginSession | null> {
 		const headerName = config.auth.header;
 		if (!headerName) return null; // refused at load time by getAuthPlugin
-		if (!isTrustedProxy(config.auth.trustedProxies, peerAddress)) return null;
-		const username = request.headers.get(headerName)?.trim();
-		if (!username || INVALID_USER.test(username)) return null;
+		const claimed = request.headers.get(headerName);
+		if (!isTrustedProxy(config.auth.trustedProxies, peerAddress)) {
+			if (claimed !== null) deny?.('untrusted-proxy', claimed);
+			return null;
+		}
+		const username = claimed?.trim();
+		if (!username) return null;
+		if (INVALID_USER.test(username)) {
+			deny?.('invalid-identity', username);
+			return null;
+		}
 		const facts: PluginSession = {
 			username,
 			role: roleFromHeader(

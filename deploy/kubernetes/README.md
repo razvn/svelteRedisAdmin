@@ -62,10 +62,15 @@ Check what RBAC says on its own:
 kubectl auth can-i get pods -n review-1 --as oidc:alice --as-group oidc:team-a
 ```
 
-Refusals and API errors go to the pod's log:
+Refusals and API errors go to the pod's log, and so does the [audit log](../../docs/AUDIT.md) (on in
+this example): one JSON line per session, write, console line or refusal, with the person who made it.
 
 ```bash
 kubectl -n tools logs deploy/svelteredisadmin
+```
+
+```bash
+kubectl -n tools logs deploy/svelteredisadmin | grep '^{"ts"'
 ```
 
 Clean up:

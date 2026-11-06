@@ -27,6 +27,7 @@ src/
       redis/               connection manager, key-type services, serializers, info/config readers
       servers/             server registry (configured + Kubernetes-discovered, string ids), RBAC access
       kubernetes/          minimal API client (ServiceAccount) and SubjectAccessReview authorizer
+      audit/               per-person audit log (docs/AUDIT.md): events, sink, session marker, command wrapper
   routes/                  see ROADMAP "Routing"
 e2e/                       Playwright specs (*.e2e.ts)
 docker/initdb/             seed script for the dev Redis instances

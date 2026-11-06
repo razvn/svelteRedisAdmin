@@ -77,3 +77,25 @@ describe('http plugin', () => {
 		expect(facts).toBeNull();
 	});
 });
+
+describe('denials', () => {
+	test('reports the claimed user of wrong credentials, not of missing or malformed ones', async () => {
+		const denied: [string, string][] = [];
+		const deny = (reason: string, user: string) => void denied.push([reason, user]);
+		const ask = (authorization: string | null) =>
+			httpPlugin.authenticate({
+				request: new Request('http://app/', {
+					headers: authorization ? { authorization } : {}
+				}),
+				cookies: {} as never,
+				config: config(),
+				peerAddress: null,
+				deny
+			});
+		expect(await ask(basic('dev', 'nope'))).toBeNull();
+		expect(await ask(null)).toBeNull();
+		expect(await ask('Bearer abc')).toBeNull();
+		expect(await ask(basic('dev', 'dev-pw'))).not.toBeNull();
+		expect(denied).toEqual([['access-denied', 'dev']]);
+	});
+});

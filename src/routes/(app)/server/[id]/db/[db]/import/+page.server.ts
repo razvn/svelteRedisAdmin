@@ -51,7 +51,15 @@ export const actions: Actions = {
 		}
 
 		const client = await locals.redis(db);
-		const result = await importDump(client, dump.data);
+		// One `import` event instead of a `command` line per restored key.
+		const result = await locals.audit.capture('quiet', () => importDump(client, dump.data));
+		locals.audit.write({
+			event: 'import',
+			db,
+			total: dump.data.keys.length,
+			imported: result.imported,
+			failed: result.errors.length
+		});
 		return {
 			total: dump.data.keys.length,
 			imported: result.imported,

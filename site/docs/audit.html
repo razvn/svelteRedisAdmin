@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Audit log - svelteRedisAdmin docs</title>
+		<meta
+			name="description"
+			content="Record who did what in svelteRedisAdmin: sessions, every write and admin command with its keys, console lines, exports, imports and refusals, as JSON Lines."
+		/>
+		<meta name="color-scheme" content="light dark" />
+		<meta name="theme-color" content="#6366f1" />
+		<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+		<link rel="canonical" href="https://razvn.github.io/svelteRedisAdmin/docs/audit.html" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+		/>
+		<link rel="stylesheet" href="../styles.css" />
+	</head>
+	<body>
+		<a class="skip" href="#main">Skip to content</a>
+		<header class="site-header">
+			<div class="wrap">
+				<a class="brand" href="../"
+					><img src="../assets/logo.svg" alt="" width="32" height="32" /><span
+						>svelteRedisAdmin</span
+					></a
+				>
+				<nav class="nav" aria-label="Main">
+					<a href="../#features">Features</a>
+					<a href="../#quick-start">Quick start</a>
+					<a class="nav-docs" href="./" aria-current="page">Docs</a>
+					<a class="btn btn-sm" href="https://github.com/razvn/svelteRedisAdmin">GitHub</a>
+				</nav>
+			</div>
+		</header>
+		<div class="wrap docs">
+			<nav class="docs-nav" aria-label="Documentation">
+				<h2>Getting started</h2>
+				<ul>
+					<li><a href="./">Overview</a></li>
+				</ul>
+				<h2>Authentication</h2>
+				<ul>
+					<li><a href="kubernetes.html">Single sign-on &amp; Kubernetes</a></li>
+				</ul>
+				<h2>Operations</h2>
+				<ul>
+					<li><a href="audit.html" aria-current="page">Audit log</a></li>
+				</ul>
+				<div class="docs-toc">
+					<h2>On this page</h2>
+					<ul>
+						<li><a href="#what-is-logged">What is logged</a></li>
+						<li><a href="#config">Configuration</a></li>
+						<li><a href="#why-stdout-and-files-not-redis">Why stdout and files, not Redis</a></li>
+						<li><a href="#values-and-personal-data">Values and personal data</a></li>
+						<li><a href="#failure-behaviour">Failure behaviour</a></li>
+						<li><a href="#shipping-it-from-kubernetes">Shipping it from Kubernetes</a></li>
+						<li><a href="#limits">Limits</a></li>
+					</ul>
+				</div>
+			</nav>
+			<main id="main" class="doc">
+				<h1>Audit log</h1>
+				<p>
+					Redis sees one password (or one ACL user) for everyone who uses the app, so its own logs,
+					<code class="inline">MONITOR</code> and <code class="inline">CLIENT LIST</code> cannot
+					tell people apart. This matters most behind single sign-on (see
+					<a href="kubernetes.html">Single sign-on and Kubernetes</a>). The audit log records, per
+					person, who did what, when, from where and on which server and database. It works with
+					every auth plugin: with <code class="inline">config</code> and
+					<code class="inline">http</code> the person is the <code class="inline">login</code> user,
+					and with <code class="inline">header</code> it is the identity the proxy forwards.
+				</p>
+				<p>
+					The log is off unless the top-level key <code class="inline">AuditLog</code> is set. When
+					it is off, connections are not wrapped and no cookie is set.
+				</p>
+				<h2 id="what-is-logged">What is logged</h2>
+				<p>One JSON object per line (JSON Lines). Every line has these fields:</p>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Field</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">ts</code></td>
+								<td>ISO 8601 time, UTC.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">event</code></td>
+								<td>
+									<code class="inline">session</code>, <code class="inline">command</code>,
+									<code class="inline">console</code>, <code class="inline">export</code>,
+									<code class="inline">import</code>, <code class="inline">logout</code> or
+									<code class="inline">denied</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">identity</code></td>
+								<td>
+									The verified person: the session user name. <code class="inline">null</code> when
+									nobody was verified (most <code class="inline">denied</code> lines).
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">role</code></td>
+								<td>
+									The app role of the person: <code class="inline">admin</code>,
+									<code class="inline">rw</code> or <code class="inline">ro</code>.
+									<code class="inline">null</code> with <code class="inline">identity</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">groups</code></td>
+								<td>
+									<code class="inline">header</code> plugin with
+									<code class="inline">auth.headerGroups</code> only: the person's groups. Left out
+									when there are none.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">server</code></td>
+								<td>
+									Server label: <code class="inline">name</code>, else
+									<code class="inline">host:port</code>. <code class="inline">null</code> outside
+									server pages.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">serverId</code></td>
+								<td>
+									Server id: its position in <code class="inline">Servers</code> as text (<code
+										class="inline"
+										>&quot;0&quot;</code
+									>), or <code class="inline">k8s:&lt;namespace&gt;:&lt;service&gt;</code> for a
+									<a href="kubernetes.html#server-discovery">discovered</a> server.
+									<code class="inline">null</code> outside server pages.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">clientIp</code></td>
+								<td>
+									Address of the person. Behind proxies listed in
+									<code class="inline">auth.trustedProxies</code>, the right-most
+									<code class="inline">X-Forwarded-For</code> address that is not one of them;
+									otherwise the TCP peer.
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<p>
+					Key names and arguments are written as text when they are valid UTF-8. Other bytes become
+					<code class="inline">{&quot;base64&quot;: &quot;...&quot;}</code>: a key name is never
+					decoded lossily.
+				</p>
+				<h3 id="session"><code class="inline">session</code></h3>
+				<p>
+					The first request of a person, and the first one after
+					<code class="inline">sessionIdleMinutes</code> without any request. A signed browser
+					cookie (<code class="inline">sra_audit</code>, HMAC-SHA256 with
+					<code class="inline">cookieSecret</code>) holds who was last seen, on which server and
+					when. It slides forward on every request. A new session starts when the marker is missing
+					or tampered with, has expired, or belongs to another person. Moving to another server also
+					starts one. Pages outside a server (the home page) keep the session going. "Log out"
+					clears the marker.
+				</p>
+				<p>
+					Without <code class="inline">cookieSecret</code> (a
+					<code class="inline">header</code> setup without a login list), the marker is signed with
+					a random key of the process: after a restart, everyone's next request starts a new
+					session.
+				</p>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T09:12:03.120Z&quot;,&quot;event&quot;:&quot;session&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;groups&quot;:[&quot;team-a&quot;],&quot;server&quot;:&quot;redis&quot;,&quot;serverId&quot;:&quot;k8s:review-1:redis&quot;,&quot;clientIp&quot;:&quot;203.0.113.7&quot;}</code></pre>
+				<h3 id="command"><code class="inline">command</code></h3>
+				<p>
+					Every command that changes data or administers the server, run for the person, whether it
+					succeeded or failed. Where it comes from in the app does not matter: the key editor, new
+					key, rename, TTL, bulk delete, flush, the config page, client kill and slow-log reset all
+					go through the same connection.
+				</p>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Field</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">db</code></td>
+								<td>
+									The database the command ran on, followed through
+									<code class="inline">SELECT</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">command</code></td>
+								<td>
+									Upper case, with the subcommand of container commands:
+									<code class="inline">SET</code>, <code class="inline">DEL</code>,
+									<code class="inline">CONFIG SET</code>, <code class="inline">CLIENT KILL</code>,
+									<code class="inline">XGROUP CREATE</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">keys</code></td>
+								<td>
+									The keys it touched:
+									<code class="inline">[&quot;a&quot;, &quot;b&quot;]</code> for
+									<code class="inline">RENAME a b</code>, the destination and sources of
+									<code class="inline">ZUNIONSTORE</code>, the
+									<code class="inline">numkeys</code> keys of <code class="inline">EVAL</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">args</code></td>
+								<td>
+									The arguments after the command name, secrets masked. Always present for
+									administration (no key), else only with <code class="inline">includeValues</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">ok</code></td>
+								<td><code class="inline">true</code> when Redis ran it.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">errorCode</code></td>
+								<td>
+									When not <code class="inline">ok</code>: the first word of the Redis error (<code
+										class="inline"
+										>WRONGTYPE</code
+									>, <code class="inline">NOPERM</code>, <code class="inline">ERR</code>), or the
+									client error name. The message is never logged.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">truncated</code></td>
+								<td>
+									<code class="inline">true</code> when a key or an argument was cut to
+									<code class="inline">maxArgLength</code>.
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T09:14:40.002Z&quot;,&quot;event&quot;:&quot;command&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;server&quot;:&quot;Cache&quot;,&quot;serverId&quot;:&quot;0&quot;,&quot;clientIp&quot;:&quot;203.0.113.7&quot;,&quot;db&quot;:2,&quot;command&quot;:&quot;RENAME&quot;,&quot;keys&quot;:[&quot;session:41&quot;,&quot;session:42&quot;],&quot;ok&quot;:true}
+{&quot;ts&quot;:&quot;2026-11-06T09:15:02.871Z&quot;,&quot;event&quot;:&quot;command&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;server&quot;:&quot;Cache&quot;,&quot;serverId&quot;:&quot;0&quot;,&quot;clientIp&quot;:&quot;203.0.113.7&quot;,&quot;db&quot;:2,&quot;command&quot;:&quot;HSET&quot;,&quot;keys&quot;:[&quot;user:7&quot;],&quot;ok&quot;:false,&quot;errorCode&quot;:&quot;WRONGTYPE&quot;}
+{&quot;ts&quot;:&quot;2026-11-06T09:16:10.420Z&quot;,&quot;event&quot;:&quot;command&quot;,&quot;identity&quot;:&quot;root&quot;,&quot;role&quot;:&quot;admin&quot;,&quot;server&quot;:&quot;Cache&quot;,&quot;serverId&quot;:&quot;0&quot;,&quot;clientIp&quot;:&quot;203.0.113.9&quot;,&quot;db&quot;:0,&quot;command&quot;:&quot;CONFIG SET&quot;,&quot;keys&quot;:[],&quot;args&quot;:[&quot;maxmemory&quot;,&quot;2gb&quot;,&quot;requirepass&quot;,&quot;***&quot;],&quot;ok&quot;:true}</code></pre>
+				<p>
+					<strong>Data commands logged</strong>: the commands Redis 7.4 and 8 flag as
+					<code class="inline">write</code>. That covers strings, hashes (field expiry included),
+					lists, sets, sorted sets, streams, HyperLogLog, geo and bit operations,
+					<code class="inline">DEL</code>/<code class="inline">UNLINK</code>,
+					<code class="inline">RENAME</code>, <code class="inline">COPY</code>,
+					<code class="inline">MOVE</code>, <code class="inline">EXPIRE</code>/<code class="inline"
+						>PERSIST</code
+					>
+					and their variants, and <code class="inline">RESTORE</code>. Also logged:
+					<code class="inline">MIGRATE</code>, <code class="inline">SORT</code> and
+					<code class="inline">GEORADIUS</code> (they can store), and
+					<code class="inline">EVAL</code>/<code class="inline">EVALSHA</code>/<code class="inline"
+						>FCALL</code
+					>
+					(a script can write).
+				</p>
+				<p>
+					<strong>Administration logged</strong>: <code class="inline">FLUSHDB</code>,
+					<code class="inline">FLUSHALL</code>, <code class="inline">SWAPDB</code>,
+					<code class="inline">CONFIG SET</code>/<code class="inline">REWRITE</code>/<code
+						class="inline"
+						>RESETSTAT</code
+					>, <code class="inline">CLIENT KILL</code>/<code class="inline">PAUSE</code>/<code
+						class="inline"
+						>UNPAUSE</code
+					>/<code class="inline">NO-EVICT</code>, <code class="inline">SLOWLOG RESET</code>,
+					<code class="inline">LATENCY RESET</code>, <code class="inline">ACL SETUSER</code>/<code
+						class="inline"
+						>DELUSER</code
+					>/ <code class="inline">LOAD</code>/<code class="inline">SAVE</code>/<code class="inline"
+						>LOG RESET</code
+					>, <code class="inline">AUTH</code>, <code class="inline">SAVE</code>,
+					<code class="inline">BGSAVE</code>, <code class="inline">BGREWRITEAOF</code>,
+					<code class="inline">SHUTDOWN</code>, <code class="inline">REPLICAOF</code>/<code
+						class="inline"
+						>SLAVEOF</code
+					>, <code class="inline">FAILOVER</code>, <code class="inline">MODULE LOAD</code>/<code
+						class="inline"
+						>UNLOAD</code
+					>, <code class="inline">SCRIPT FLUSH</code>/<code class="inline">KILL</code>/<code
+						class="inline"
+						>LOAD</code
+					>, <code class="inline">FUNCTION LOAD</code>/<code class="inline">DELETE</code>/<code
+						class="inline"
+						>FLUSH</code
+					>/ <code class="inline">RESTORE</code>/<code class="inline">KILL</code>,
+					<code class="inline">MEMORY PURGE</code>, every <code class="inline">DEBUG …</code>, and
+					the <code class="inline">CLUSTER</code> subcommands that change the cluster.
+				</p>
+				<p>
+					<strong>Not logged</strong>: reads (<code class="inline">GET</code>,
+					<code class="inline">SCAN</code>, <code class="inline">TYPE</code>,
+					<code class="inline">TTL</code>, <code class="inline">HGETALL</code>,
+					<code class="inline">INFO</code>, <code class="inline">CONFIG GET</code>,
+					<code class="inline">CLIENT LIST</code>, <code class="inline">SLOWLOG GET</code>, …). The
+					app runs its own reads on the same connection to draw every page, so they say nothing
+					about what the person did. Reads typed in the console are the exception, see below.
+				</p>
+				<p>
+					The list is fixed in the app (<code class="inline">src/lib/server/audit/commands.ts</code
+					>). It does not ask the server, so a module's own write commands (RedisJSON, RediSearch…)
+					are only logged when typed in the console.
+				</p>
+				<h3 id="console"><code class="inline">console</code></h3>
+				<p>
+					Every command typed in the console and sent to Redis, reads included:
+					<code class="inline">KEYS *</code> or <code class="inline">GET token:alice</code> are
+					something the person chose to look at. It has the same fields as
+					<code class="inline">command</code>. Keys of commands the fixed list does not know come
+					from the server (<code class="inline">COMMAND GETKEYS</code>). The console logs no
+					<code class="inline">command</code> line of its own, so nothing is counted twice.
+				</p>
+				<p>
+					Lines the console refuses before they reach Redis (<code class="inline">MONITOR</code>,
+					<code class="inline">SHUTDOWN</code>, lines past the per-run limit) are not logged.
+				</p>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T09:20:11.530Z&quot;,&quot;event&quot;:&quot;console&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;admin&quot;,&quot;server&quot;:&quot;Cache&quot;,&quot;serverId&quot;:&quot;0&quot;,&quot;clientIp&quot;:&quot;203.0.113.7&quot;,&quot;db&quot;:0,&quot;command&quot;:&quot;GET&quot;,&quot;keys&quot;:[&quot;token:alice&quot;],&quot;ok&quot;:true}</code></pre>
+				<h3 id="export"><code class="inline">export</code></h3>
+				<p>A database exported as JSON (the download).</p>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Field</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">db</code></td>
+								<td>The database.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">filter</code></td>
+								<td>The key pattern, when one was given.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">keys</code></td>
+								<td>How many keys the file holds.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T09:22:40.118Z&quot;,&quot;event&quot;:&quot;export&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;server&quot;:&quot;Cache&quot;,&quot;serverId&quot;:&quot;0&quot;,&quot;clientIp&quot;:&quot;203.0.113.7&quot;,&quot;db&quot;:2,&quot;filter&quot;:&quot;session:*&quot;,&quot;keys&quot;:1840}</code></pre>
+				<h3 id="import"><code class="inline">import</code></h3>
+				<p>
+					A JSON dump imported into a database. One line for the whole import: the commands that
+					restore each key are not logged one by one.
+				</p>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Field</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">db</code></td>
+								<td>The database.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">total</code></td>
+								<td>Keys in the file.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">imported</code></td>
+								<td>Keys written.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">failed</code></td>
+								<td>Keys that could not be written.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T09:25:03.902Z&quot;,&quot;event&quot;:&quot;import&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;server&quot;:&quot;Cache&quot;,&quot;serverId&quot;:&quot;0&quot;,&quot;clientIp&quot;:&quot;203.0.113.7&quot;,&quot;db&quot;:3,&quot;total&quot;:1840,&quot;imported&quot;:1838,&quot;failed&quot;:2}</code></pre>
+				<h3 id="logout"><code class="inline">logout</code></h3>
+				<p>"Log out" by a signed-in person.</p>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T10:02:45.017Z&quot;,&quot;event&quot;:&quot;logout&quot;,&quot;identity&quot;:&quot;alice&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;server&quot;:null,&quot;serverId&quot;:null,&quot;clientIp&quot;:&quot;203.0.113.7&quot;}</code></pre>
+				<h3 id="denied"><code class="inline">denied</code></h3>
+				<p>
+					Refused access. Refusals of an identity carry <code class="inline">claimedUser</code>, the
+					name that was presented, as sent (at most 256 characters), and
+					<code class="inline">identity: null</code> because nobody was verified. Refusals of a
+					signed-in person keep their <code class="inline">identity</code>.
+				</p>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th><code class="inline">reason</code></th>
+								<th>When</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">untrusted-proxy</code></td>
+								<td>
+									<code class="inline">header</code>: the user header came from a peer outside
+									<code class="inline">auth.trustedProxies</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">invalid-identity</code></td>
+								<td>
+									<code class="inline">header</code>: the trusted proxy sent an unusable user header
+									(control character, comma, header sent twice).
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">access-denied</code></td>
+								<td>
+									<code class="inline">config</code> login form or
+									<code class="inline">http</code> Basic: wrong user name or password.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">server-not-allowed</code></td>
+								<td>
+									The server is not in the person's <code class="inline">servers</code> list
+									(answered as 404).
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">not-authorized</code></td>
+								<td>
+									Kubernetes RBAC (<code class="inline">authorize</code>) refused the person on this
+									server (403).
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorization-error</code></td>
+								<td>
+									Kubernetes RBAC could not be checked: API server unreachable or erroring (503).
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">role</code></td>
+								<td>
+									The person's role does not allow the action. <code class="inline">action</code> is
+									<code class="inline">write</code> (an <code class="inline">ro</code> person) or
+									<code class="inline">admin</code> (an <code class="inline">rw</code> one).
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<pre><code>{&quot;ts&quot;:&quot;2026-11-06T09:30:00.441Z&quot;,&quot;event&quot;:&quot;denied&quot;,&quot;identity&quot;:null,&quot;role&quot;:null,&quot;server&quot;:null,&quot;serverId&quot;:null,&quot;clientIp&quot;:&quot;198.51.100.9&quot;,&quot;reason&quot;:&quot;untrusted-proxy&quot;,&quot;claimedUser&quot;:&quot;admin&quot;}
+{&quot;ts&quot;:&quot;2026-11-06T09:31:12.007Z&quot;,&quot;event&quot;:&quot;denied&quot;,&quot;identity&quot;:&quot;bob&quot;,&quot;role&quot;:&quot;rw&quot;,&quot;groups&quot;:[&quot;team-b&quot;],&quot;server&quot;:&quot;redis&quot;,&quot;serverId&quot;:&quot;k8s:review-1:redis&quot;,&quot;clientIp&quot;:&quot;203.0.113.8&quot;,&quot;reason&quot;:&quot;not-authorized&quot;}</code></pre>
+				<p>
+					Requests without any identity claim (a <code class="inline">header</code> request without
+					the user header, an <code class="inline">http</code> request without credentials) are not
+					logged.
+				</p>
+				<h2 id="config">Configuration</h2>
+				<pre><code>{
+	&quot;AuditLog&quot;: { &quot;target&quot;: &quot;stdout&quot; }
+}</code></pre>
+				<pre><code>{
+	&quot;AuditLog&quot;: {
+		&quot;target&quot;: &quot;file&quot;,
+		&quot;path&quot;: &quot;./var/audit.jsonl&quot;,
+		&quot;includeValues&quot;: false,
+		&quot;sessionIdleMinutes&quot;: 30,
+		&quot;maxArgLength&quot;: 1024
+	}
+}</code></pre>
+				<p>
+					<code class="inline">AuditLog</code> is specific to svelteRedisAdmin, not a phpRedisAdmin
+					key.
+				</p>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Key</th>
+								<th>Default</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">target</code></td>
+								<td>(required)</td>
+								<td><code class="inline">stdout</code>, or <code class="inline">file</code>.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">path</code></td>
+								<td>(none)</td>
+								<td>
+									Required with <code class="inline">file</code>. Relative paths resolve from the
+									directory of the config file. The directory must exist.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">includeValues</code></td>
+								<td><code class="inline">false</code></td>
+								<td>
+									Also log the arguments of data commands and console lines (the values). See
+									<a href="#values-and-personal-data">Values and personal data</a>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">sessionIdleMinutes</code></td>
+								<td><code class="inline">30</code></td>
+								<td>
+									Inactivity after which a person's next request is a new
+									<code class="inline">session</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">maxArgLength</code></td>
+								<td><code class="inline">1024</code></td>
+								<td>
+									Longer key names, arguments and export filters are cut, and the line gets
+									<code class="inline">truncated: true</code>.
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<h2 id="why-stdout-and-files-not-redis">Why stdout and files, not Redis</h2>
+				<p>
+					The log never goes into Redis. Everyone who can write through the app can also delete keys
+					there, so a person could erase their own trail. Lines written to stdout leave the process
+					at once. The container runtime keeps them, and a log collector can ship them off the node
+					where nobody using the app can reach them.
+				</p>
+				<h2 id="values-and-personal-data">Values and personal data</h2>
+				<p>
+					With <code class="inline">includeValues: false</code>, the log holds command names and key
+					names, never the values: <code class="inline">SET token:alice &lt;value&gt;</code> is
+					logged as <code class="inline">SET</code> on <code class="inline">token:alice</code>. Key
+					names can still be personal data (<code class="inline">user:alice@example.com</code>), and
+					administration commands always carry their arguments.
+				</p>
+				<p>
+					With <code class="inline">includeValues: true</code>, every argument is logged, cut to
+					<code class="inline">maxArgLength</code>: the values written, the script of an
+					<code class="inline">EVAL</code>, the values typed in the console. Treat the audit log as
+					personal data: restrict who can read it, and set a retention period in the log store.
+				</p>
+				<p>
+					Passwords are masked in both modes: <code class="inline">AUTH</code>,
+					<code class="inline">HELLO … AUTH</code>,
+					<code class="inline">CONFIG SET requirepass</code> /
+					<code class="inline">masterauth</code> / <code class="inline">tls-key-file-pass</code> /
+					<code class="inline">tls-client-key-file-pass</code>, the password rules of
+					<code class="inline">ACL SETUSER</code> (<code class="inline">&gt;</code>,
+					<code class="inline">&lt;</code>, <code class="inline">#</code>,
+					<code class="inline">!</code>), and <code class="inline">MIGRATE … AUTH</code> /
+					<code class="inline">AUTH2</code>. They are logged as <code class="inline">***</code>.
+				</p>
+				<h2 id="failure-behaviour">Failure behaviour</h2>
+				<p>
+					The log fails open. If a line cannot be written (missing directory, full disk, closed
+					stdout), the error is reported once with <code class="inline">console.error</code> and the
+					request goes on. Later lines to that file are dropped until the app restarts. Watch for
+					the <code class="inline">[audit]</code> message in the app's own logs.
+				</p>
+				<p>
+					A refused command is still logged when Redis refuses it (<code class="inline"
+						>ok: false</code
+					>). The log only misses commands that never reached the connection.
+				</p>
+				<h2 id="shipping-it-from-kubernetes">Shipping it from Kubernetes</h2>
+				<p>
+					Use <code class="inline">&quot;target&quot;: &quot;stdout&quot;</code>. The kubelet writes
+					container output to <code class="inline">/var/log/containers/*.log</code> on the node, and
+					a node-level collector (Fluent Bit, Vector, the OpenTelemetry Collector, Promtail) ships
+					it to your log store. Audit lines are the stdout lines whose JSON starts with
+					<code class="inline">ts</code> and <code class="inline">event</code>. Example Fluent Bit
+					filter that keeps them and drops the rest of the app's output:
+				</p>
+				<pre><code>[FILTER]
+    Name    grep
+    Match   kube.*svelteredisadmin*
+    Regex   log ^\{&quot;ts&quot;:&quot;[^&quot;]+&quot;,&quot;event&quot;:</code></pre>
+				<p>
+					Then parse <code class="inline">log</code> as JSON and index
+					<code class="inline">identity</code>, <code class="inline">event</code>,
+					<code class="inline">serverId</code> and <code class="inline">command</code>. Keep the log
+					store outside the namespace of the app, so the people the log is about cannot delete it.
+				</p>
+				<p>
+					With <code class="inline">&quot;target&quot;: &quot;file&quot;</code>, mount a volume at
+					the directory of <code class="inline">path</code> and run a sidecar that tails the file.
+					The app only appends to it, so rotate it with a tool that uses copy-and-truncate.
+				</p>
+				<h2 id="limits">Limits</h2>
+				<ul>
+					<li>
+						The log records what went through this app only. Someone with the Redis password can
+						still connect directly; restrict that with a NetworkPolicy and Redis ACLs.
+					</li>
+					<li>
+						The command list is fixed: a new Redis write command, or a module's own, is only logged
+						when it is typed in the console. Update
+						<code class="inline">src/lib/server/audit/commands.ts</code> when Redis adds one.
+					</li>
+					<li>An import is one line: it says how many keys were written, not which ones.</li>
+					<li>
+						Lines are written as each event happens, one process at a time. With several replicas,
+						the lines of one person can be spread over the replicas' logs; sort them by
+						<code class="inline">ts</code>.
+					</li>
+				</ul>
+			</main>
+		</div>
+		<footer class="site-footer">
+			<div class="wrap">
+				<div>
+					<a class="brand" href="../"
+						><img src="../assets/logo.svg" alt="" width="28" height="28" /><span
+							>svelteRedisAdmin</span
+						></a
+					>
+					<p style="margin-top: 0.75rem">
+						svelteRedisAdmin is an independent project and is not affiliated with Redis Ltd. Redis
+						is a trademark of Redis Ltd; phpRedisAdmin is a project of its respective owners.
+					</p>
+				</div>
+				<ul>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin">Source on GitHub</a></li>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin/issues">Issues</a></li>
+					<li>
+						<a href="https://github.com/razvn/svelteRedisAdmin/blob/main/LICENSE"
+							>GPL-2.0-or-later</a
+						>
+					</li>
+				</ul>
+			</div>
+		</footer>
+	</body>
+</html>
