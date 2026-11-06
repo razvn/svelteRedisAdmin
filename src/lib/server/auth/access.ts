@@ -45,19 +45,7 @@ export function resolveServers(
 /** The slice of `App.Locals` the guards need (keeps the guards unit-testable). */
 export interface GuardLocals {
 	session: SessionInfo | null;
-	serverIndex: number | null;
 	i18n: { t: (msgid: string, ...args: never[]) => string };
-}
-
-/** 404 (not 403) so the existence of a hidden server is not leaked. */
-export function assertServerAccess(locals: GuardLocals): void {
-	if (
-		locals.session &&
-		locals.serverIndex !== null &&
-		!canAccessServer(locals.session, locals.serverIndex)
-	) {
-		error(404, locals.i18n.t('Server not found'));
-	}
 }
 
 export function assertWrite(locals: GuardLocals): void {

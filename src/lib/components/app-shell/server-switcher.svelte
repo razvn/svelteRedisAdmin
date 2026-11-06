@@ -9,19 +9,19 @@
 	import { serverHref } from '#lib/nav/paths.ts';
 
 	interface ServerEntry {
-		index: number;
+		id: string;
 		label: string;
 	}
 
 	interface Props {
 		servers: ServerEntry[];
-		current: number;
+		current: string;
 	}
 
 	let { servers, current }: Props = $props();
 
-	function choose(index: number) {
-		if (index !== current) void goto(resolve(bare(serverHref(index))));
+	function choose(id: string) {
+		if (id !== current) void goto(resolve(bare(serverHref(id))));
 	}
 </script>
 
@@ -41,14 +41,14 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
 		<DropdownMenu.Label>Server</DropdownMenu.Label>
-		{#each servers as s (s.index)}
+		{#each servers as s (s.id)}
 			<DropdownMenu.Item
-				onclick={() => choose(s.index)}
-				aria-checked={s.index === current}
+				onclick={() => choose(s.id)}
+				aria-checked={s.id === current}
 				role="menuitemradio"
 			>
 				{s.label}
-				{#if s.index === current}<Check class="ms-auto size-4 text-primary" />{/if}
+				{#if s.id === current}<Check class="ms-auto size-4 text-primary" />{/if}
 			</DropdownMenu.Item>
 		{/each}
 	</DropdownMenu.Content>

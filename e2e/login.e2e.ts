@@ -28,6 +28,16 @@ test.describe('login flow', () => {
 		await expect(page.getByTestId('server-card')).toHaveCount(2);
 	});
 
+	test('shows a restricted user only their servers', async ({ page }) => {
+		// config.json: writer is limited to server 0.
+		await page.goto('/login');
+		await page.getByLabel('Username').fill('writer');
+		await page.getByLabel('Password').fill('writer');
+		await page.getByRole('button', { name: 'Sign in' }).click();
+		await expect(page.getByTestId('home')).toBeVisible();
+		await expect(page.getByTestId('server-card')).toHaveCount(1);
+	});
+
 	test('logs out from the user menu', async ({ page }) => {
 		await page.goto('/login');
 		await page.getByLabel('Username').fill('admin');

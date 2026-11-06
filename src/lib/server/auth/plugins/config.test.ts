@@ -25,7 +25,8 @@ const ctx = (token?: string) => {
 	return {
 		config: cfg,
 		cookies: cookiesWith(token),
-		request: new Request('http://localhost/')
+		request: new Request('http://localhost/'),
+		peerAddress: null
 	};
 };
 

@@ -1,5 +1,5 @@
 {
-	"$comment": "Copy to config.json (git-ignored) or point SRA_CONFIG at it. Key names follow phpRedisAdmin's config. auth.plugin: 'config' (login form, default), 'http' (HTTP Basic against the login list) or 'header' (trust config.auth.header, e.g. 'x-forwarded-user', set by your ingress).",
+	"$comment": "Copy to config.json (git-ignored) or point SRA_CONFIG at it. Key names follow phpRedisAdmin's config. auth.plugin: 'config' (login form, default), 'http' (HTTP Basic against the login list) or 'header' (trust config.auth.header, e.g. 'x-forwarded-user', set by your SSO proxy; requires auth.trustedProxies). Kubernetes RBAC per server (authorize) and ServerDiscovery: see docs/KUBERNETES.md.",
 	"Servers": [
 		{
 			"name": "Dev redis1",

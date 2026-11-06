@@ -22,9 +22,9 @@
 	const i18n = useI18n();
 	const t = $derived(i18n.t);
 
-	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
+	const hrefFor = (tab: TabDef) => serverTabHref(data.serverId, tabSubPath(tab.id));
 
-	const basePath = $derived(serverTabHref(data.serverIndex, 'config'));
+	const basePath = $derived(serverTabHref(data.serverId, 'config'));
 
 	const query = $derived(data.q.trim().toLowerCase());
 	const filtered = $derived(
@@ -45,7 +45,7 @@
 <svelte:head><title>{t('Config')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-config">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.serverLabel} />
 	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('config')} {hrefFor} />
 	<PageHeader title={t('Config')} description={t('CONFIG GET and SET')} icon={Cog}>
 		{#snippet actions()}

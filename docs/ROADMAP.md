@@ -127,15 +127,24 @@ makes sense, with a modern UI and a maintainable test suite.
       Access authenticate at the edge, the app trusts the sanitized header. Must refuse when the
       header comes directly from outside (documented deployment requirement: ingress strips/sets it).
   - **Later plugins** (same interface, no core changes): OIDC/OAuth2 authorization-code flow; JWT /
-    PAM-style validation; **k8s TokenReview** (validate a bearer token against the cluster API and
-    map RBAC/claims to servers — "user has access to that node → gets those RedisAdmin servers").
+    PAM-style validation.
+
+  ### 5b' — SSO hardening, Kubernetes RBAC and server discovery ✅ DONE (see `docs/KUBERNETES.md`)
+
+  Ported from svelteMyAdmin's `signon` work.
+  - `header` plugin trusts its headers only from `auth.trustedProxies` (required), refuses duplicated
+    user headers, reads groups (`auth.headerGroups`).
+  - Server `authorize: { type: "kubernetes-sar", namespace }`: a cached SubjectAccessReview decides
+    whether the person may use the server (403 denied, 503 when it cannot be checked, fail closed).
+  - `ServerDiscovery: { type: "kubernetes" }`: Redis Services of labelled namespaces become servers
+    with stable ids (`k8s:<namespace>:<service>`), password from a Secret, RBAC of their namespace.
+    Server ids in routes are strings now (`locals.serverId`); configured servers keep their position.
+  - `/api/health`, `Dockerfile`, `deploy/kubernetes` manifests (tried on a local k3s cluster).
 
   ### 5c — Later (recorded, not scheduled)
   - **Per-user Redis credentials**: login entries may carry `redis: {username, password}` so Redis 6+
     ACLs enforce command-level permissions end-to-end; ACL DENIED errors render as friendly
     "not permitted" alerts instead of 500s.
-  - **Dynamic server discovery** for the k8s model: servers from ConfigMap/CRD/service labels instead
-    of static `config.json` (config.json keeps bootstrap + credentials).
   - **Group→server mapping**: `auth.groups = [{ group: "team-a", servers: [0, 2] }, ...]` applied to
     plugin-provided group claims.
   - Password hashing (bcrypt/argon2) in `login` entries; login rate limiting; `secure` cookie flag.

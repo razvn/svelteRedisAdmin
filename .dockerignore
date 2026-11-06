@@ -1,0 +1,17 @@
+# Only what `pnpm build` needs goes into the build context.
+node_modules
+build
+.svelte-kit
+test-results
+playwright-report
+config.json
+docs
+site
+e2e
+deploy
+**/*.test.ts
+.env
+.env.*
+docker
+docker-compose.yml
+.verify

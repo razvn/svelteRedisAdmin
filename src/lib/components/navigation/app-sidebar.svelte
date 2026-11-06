@@ -10,7 +10,7 @@
 	import { useI18n } from '#lib/i18n/index.ts';
 
 	interface ServerEntry {
-		index: number;
+		id: string;
 		label: string;
 		databases: number;
 		defaultDb: number;
@@ -25,13 +25,8 @@
 	const i18n = useI18n();
 	const t = $derived(i18n.t);
 
-	const currentIndex = $derived.by(() => {
-		const id = page.params['id'];
-		if (id === undefined) return null;
-		const index = Number(id);
-		return servers.some((s) => s.index === index) ? index : null;
-	});
-	const current = $derived(servers.find((s) => s.index === currentIndex));
+	const currentId = $derived(page.params['id'] ?? null);
+	const current = $derived(servers.find((s) => s.id === currentId));
 	const databases = $derived(
 		current ? Array.from({ length: Math.min(current.databases, 256) }, (_, i) => i) : []
 	);
@@ -61,11 +56,11 @@
 			<Sidebar.GroupLabel>{t('Servers')}</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each servers as server (server.index)}
+					{#each servers as server (server.id)}
 						<Sidebar.MenuItem>
-							<Sidebar.MenuButton isActive={server.index === currentIndex}>
+							<Sidebar.MenuButton isActive={server.id === currentId}>
 								{#snippet child({ props })}
-									<a {...props} href={resolve(bare(serverHref(server.index)))}>
+									<a {...props} href={resolve(bare(serverHref(server.id)))}>
 										<Server />
 										<span class="truncate">{server.label}</span>
 									</a>
@@ -86,7 +81,7 @@
 							<Sidebar.MenuItem>
 								<Sidebar.MenuButton isActive={Number(page.params['db']) === db}>
 									{#snippet child({ props })}
-										<a {...props} href={resolve(bare(dbHref(current.index, db)))}>
+										<a {...props} href={resolve(bare(dbHref(current.id, db)))}>
 											<Database />
 											<span class="tabular-nums">db{db}</span>
 										</a>

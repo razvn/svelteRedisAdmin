@@ -8,7 +8,7 @@ const SECTION_ORDER = ['server', 'memory', 'clients', 'stats', 'replication', 'c
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.server) error(404, locals.i18n.t('Server not found'));
-	const serverIndex = locals.serverIndex ?? 0;
+	const serverId = locals.serverId ?? '0';
 	const client = await locals.redis();
 
 	const info = await getServerInfo(client);
@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		});
 
 	return {
-		serverIndex,
+		serverId,
 		serverLabel: serverName(locals.server),
 		section,
 		sections: known,

@@ -62,6 +62,18 @@ export default defineConfig({
 				}
 			},
 			{
+				// Generated-input round-trip properties (verify-dump-roundtrip skill), run with `pnpm verify:dump`.
+				// Kept out of `unit`/`integration`: they fail on open findings until those are fixed.
+				extends: './vite.config.ts',
+				test: {
+					name: 'formal',
+					environment: 'node',
+					include: ['src/**/*.formal.ts'],
+					testTimeout: 120_000,
+					hookTimeout: 30_000
+				}
+			},
+			{
 				// Needs `pnpm db:up` (MySQL on :33306, MariaDB on :33307).
 				extends: './vite.config.ts',
 				test: {

@@ -270,5 +270,9 @@
 	"Server error": "Error del servidor",
 	"Error": "Error",
 	"Back to home": "Volver al inicio",
-	"Web admin for Redis databases.": "Administración web para bases de datos Redis."
+	"Web admin for Redis databases.": "Administración web para bases de datos Redis.",
+	"You do not have access to this server (Kubernetes namespace {namespace}).": "No tiene acceso a este servidor (namespace de Kubernetes {namespace}).",
+	"Cannot verify your access right now.": "No se puede verificar su acceso en este momento.",
+	"Cannot list the Redis servers right now.": "No se pueden listar los servidores Redis en este momento.",
+	"Cannot read the password of this server right now.": "No se puede leer la contraseña de este servidor en este momento."
 }

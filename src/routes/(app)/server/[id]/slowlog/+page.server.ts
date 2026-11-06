@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const nowSeconds = Date.now() / 1000;
 
 	return {
-		serverIndex: locals.serverIndex ?? 0,
+		serverId: locals.serverId ?? '0',
 		serverLabel: serverName(locals.server),
 		length,
 		canWrite: canWrite(locals.session),
@@ -54,6 +54,6 @@ export const actions: Actions = {
 			return fail(400, { error: t('SLOWLOG RESET failed.') });
 		}
 
-		redirect(303, `/server/${locals.serverIndex ?? 0}/slowlog`);
+		redirect(303, `/server/${locals.serverId ?? '0'}/slowlog`);
 	}
 };

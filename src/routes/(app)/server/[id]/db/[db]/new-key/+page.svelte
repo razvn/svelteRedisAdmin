@@ -39,13 +39,13 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="new-key">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.label} db={data.db} />
 
 	<TabBar
 		label={t('Database')}
 		tabs={DB_TABS}
 		current="new-key"
-		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
+		hrefFor={(tab) => dbTabHref(data.serverId, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader
@@ -123,7 +123,7 @@
 							<Plus />
 							{t('Create key')}
 						</Button>
-						<Button variant="ghost" href={dbHref(data.serverIndex, data.db)}>{t('Cancel')}</Button>
+						<Button variant="ghost" href={dbHref(data.serverId, data.db)}>{t('Cancel')}</Button>
 					</div>
 				</form>
 			</Card.Content>

@@ -42,6 +42,7 @@
 					<a href="#screenshots">Screenshots</a>
 					<a href="#auth">Users &amp; auth</a>
 					<a href="#quick-start">Quick start</a>
+					<a class="nav-docs" href="docs/">Docs</a>
 					<a class="btn btn-sm" href="https://github.com/razvn/svelteRedisAdmin">GitHub</a>
 				</nav>
 			</div>
@@ -303,7 +304,16 @@
 								<code class="inline">auth.plugin</code>: the config login form, HTTP Basic, or
 								<code class="inline">header</code> to trust
 								<code class="inline">X-Forwarded-User</code> from oauth2-proxy, Istio or Cloudflare
-								Access &mdash; the Kubernetes pattern.</span
+								Access, only from your proxy's addresses.</span
+							>
+						</li>
+						<li>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg
+							><span
+								><strong>Kubernetes RBAC and discovery.</strong> A SubjectAccessReview decides who
+								may use the Redis of a namespace, and the Redis Services of review namespaces show
+								up on their own, password read from a Secret.
+								<a href="docs/kubernetes.html">Read the guide</a>.</span
 							>
 						</li>
 						<li>
@@ -377,6 +387,7 @@ pnpm dev</code></pre>
 					</p>
 				</div>
 				<ul>
+					<li><a href="docs/">Documentation</a></li>
 					<li><a href="https://github.com/razvn/svelteRedisAdmin">Source on GitHub</a></li>
 					<li><a href="https://github.com/razvn/svelteRedisAdmin/issues">Issues</a></li>
 					<li>

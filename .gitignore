@@ -30,3 +30,6 @@ playwright-report
 .vitest-attachments
 .claude/settings.local.json
 /.claude/worktrees/
+
+# Verification runs (verify-sra skill): instances and evidence
+/.verify/

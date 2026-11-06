@@ -28,7 +28,7 @@
 	const t = $derived(i18n.t);
 	const tn = $derived(i18n.tn);
 
-	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
+	const hrefFor = (tab: TabDef) => serverTabHref(data.serverId, tabSubPath(tab.id));
 
 	const stats = $derived(data.stats);
 </script>
@@ -36,7 +36,7 @@
 <svelte:head><title>{data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-overview">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.serverLabel} />
 	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('overview')} {hrefFor} />
 	<PageHeader title={data.serverLabel} description={t('Server overview')} icon={Server}>
 		{#snippet actions()}

@@ -4,10 +4,10 @@ import { resolveDb } from '#lib/server/routing.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+	if (!locals.server || locals.serverId === null) error(404, 'Server not found');
 	const db = resolveDb(params, locals.server);
 	return {
-		serverIndex: locals.serverIndex,
+		serverId: locals.serverId,
 		db,
 		label: serverName(locals.server)
 	};

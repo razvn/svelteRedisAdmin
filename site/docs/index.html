@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Overview - svelteRedisAdmin docs</title>
+		<meta
+			name="description"
+			content="svelteRedisAdmin documentation: configuration, authentication plugins, single sign-on and Kubernetes."
+		/>
+		<meta name="color-scheme" content="light dark" />
+		<meta name="theme-color" content="#6366f1" />
+		<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+		<link rel="canonical" href="https://razvn.github.io/svelteRedisAdmin/docs/" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+		/>
+		<link rel="stylesheet" href="../styles.css" />
+	</head>
+	<body>
+		<a class="skip" href="#main">Skip to content</a>
+		<header class="site-header">
+			<div class="wrap">
+				<a class="brand" href="../"
+					><img src="../assets/logo.svg" alt="" width="32" height="32" /><span
+						>svelteRedisAdmin</span
+					></a
+				>
+				<nav class="nav" aria-label="Main">
+					<a href="../#features">Features</a>
+					<a href="../#quick-start">Quick start</a>
+					<a class="nav-docs" href="./" aria-current="page">Docs</a>
+					<a class="btn btn-sm" href="https://github.com/razvn/svelteRedisAdmin">GitHub</a>
+				</nav>
+			</div>
+		</header>
+		<div class="wrap docs">
+			<nav class="docs-nav" aria-label="Documentation">
+				<h2>Getting started</h2>
+				<ul>
+					<li><a href="./" aria-current="page">Overview</a></li>
+				</ul>
+				<h2>Authentication</h2>
+				<ul>
+					<li><a href="kubernetes.html">Single sign-on &amp; Kubernetes</a></li>
+				</ul>
+			</nav>
+			<main id="main" class="doc">
+				<h1>Documentation</h1>
+				<p>
+					svelteRedisAdmin is configured with one <code class="inline">config.json</code> (path in
+					<code class="inline">SRA_CONFIG</code>). Its keys follow phpRedisAdmin:
+					<code class="inline">Servers</code> with <code class="inline">name</code>,
+					<code class="inline">host</code>, <code class="inline">port</code>,
+					<code class="inline">auth</code>, <code class="inline">db</code>,
+					<code class="inline">databases</code>, <code class="inline">filter</code>,
+					<code class="inline">separator</code>, plus <code class="inline">login</code> and
+					<code class="inline">cookieSecret</code> for authentication. A commented
+					<a href="https://github.com/razvn/svelteRedisAdmin/blob/main/config.sample.json"
+						>config.sample.json</a
+					>
+					is in the repository.
+				</p>
+				<div class="doc-cards">
+					<a href="kubernetes.html"
+						><strong>Single sign-on &amp; Kubernetes</strong
+						><span
+							>Trust an SSO proxy (oauth2-proxy…), check Kubernetes RBAC per server, and discover
+							the Redis of review namespaces.</span
+						></a
+					>
+					<a href="https://github.com/razvn/svelteRedisAdmin/tree/main/deploy/kubernetes"
+						><strong>Kubernetes manifests</strong
+						><span
+							>The app with discovery and RBAC, two example review environments, and a local
+							walkthrough.</span
+						></a
+					>
+				</div>
+				<h2 id="auth">Authentication at a glance</h2>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th><code class="inline">auth.plugin</code></th>
+								<th>Who logs people in</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">config</code> (default)</td>
+								<td>
+									The login form, against the <code class="inline">login</code> list (roles
+									<code class="inline">admin</code>, <code class="inline">rw</code>,
+									<code class="inline">ro</code>, optional
+									<code class="inline">servers</code> list). No list: everyone is admin, like
+									phpRedisAdmin's default install.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">http</code></td>
+								<td>HTTP Basic, against the same <code class="inline">login</code> list.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">header</code></td>
+								<td>
+									An SSO proxy, through identity headers trusted only from
+									<code class="inline">auth.trustedProxies</code>. Required for Kubernetes RBAC and
+									server discovery. See
+									<a href="kubernetes.html">Single sign-on &amp; Kubernetes</a>.
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</main>
+		</div>
+		<footer class="site-footer">
+			<div class="wrap">
+				<div>
+					<a class="brand" href="../"
+						><img src="../assets/logo.svg" alt="" width="28" height="28" /><span
+							>svelteRedisAdmin</span
+						></a
+					>
+					<p style="margin-top: 0.75rem">
+						svelteRedisAdmin is an independent project and is not affiliated with Redis Ltd. Redis
+						is a trademark of Redis Ltd; phpRedisAdmin is a project of its respective owners.
+					</p>
+				</div>
+				<ul>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin">Source on GitHub</a></li>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin/issues">Issues</a></li>
+					<li>
+						<a href="https://github.com/razvn/svelteRedisAdmin/blob/main/LICENSE"
+							>GPL-2.0-or-later</a
+						>
+					</li>
+				</ul>
+			</div>
+		</footer>
+	</body>
+</html>

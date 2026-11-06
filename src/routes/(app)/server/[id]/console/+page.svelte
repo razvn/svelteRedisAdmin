@@ -21,7 +21,7 @@
 	const i18n = useI18n();
 	const t = $derived(i18n.t);
 
-	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
+	const hrefFor = (tab: TabDef) => serverTabHref(data.serverId, tabSubPath(tab.id));
 
 	// After a POST the page re-renders with the action data — seed the textarea once.
 	let input = $state(untrack(() => form?.input ?? ''));
@@ -78,7 +78,7 @@
 <svelte:head><title>{t('Console')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="console-page">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.serverLabel} />
 	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('console')} {hrefFor} />
 	<PageHeader
 		title={t('Console')}
