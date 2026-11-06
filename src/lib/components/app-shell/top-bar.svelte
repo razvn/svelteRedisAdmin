@@ -18,10 +18,10 @@
 			role: 'admin' | 'rw' | 'ro';
 			host: string;
 			serverLabel: string;
-			serverIndex: number;
+			serverId: string;
 			canLogout: boolean;
 		};
-		servers: { index: number; label: string }[];
+		servers: { id: string; label: string }[];
 		onsearch?: () => void;
 	}
 
@@ -61,7 +61,7 @@
 
 		<div class="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
 			{#if servers.length > 1}
-				<ServerSwitcher {servers} current={session.serverIndex} />
+				<ServerSwitcher {servers} current={session.serverId} />
 			{/if}
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger>

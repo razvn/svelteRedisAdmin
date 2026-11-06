@@ -18,9 +18,7 @@
 	const i18n = useI18n();
 	const t = $derived(i18n.t);
 
-	const downloadHref = $derived(
-		resolve(bare(`${dbHref(data.serverIndex, data.db)}/export/download`))
-	);
+	const downloadHref = $derived(resolve(bare(`${dbHref(data.serverId, data.db)}/export/download`)));
 </script>
 
 <svelte:head>
@@ -28,13 +26,13 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="export">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.label} db={data.db} />
 
 	<TabBar
 		label={t('Database')}
 		tabs={DB_TABS}
 		current="export"
-		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
+		hrefFor={(tab) => dbTabHref(data.serverId, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader
@@ -75,12 +73,12 @@
 				{t('Import the file later from the')}
 				<a
 					class="text-primary underline underline-offset-4"
-					href={resolve(bare(dbTabHref(data.serverIndex, data.db, 'import')))}>{t('Import tab')}</a
+					href={resolve(bare(dbTabHref(data.serverId, data.db, 'import')))}>{t('Import tab')}</a
 				>
 				{t('or go back to the')}
 				<a
 					class="text-primary underline underline-offset-4"
-					href={resolve(bare(dbHref(data.serverIndex, data.db)))}>{t('key browser')}</a
+					href={resolve(bare(dbHref(data.serverId, data.db)))}>{t('key browser')}</a
 				>.
 			</p>
 		</Card.Content>

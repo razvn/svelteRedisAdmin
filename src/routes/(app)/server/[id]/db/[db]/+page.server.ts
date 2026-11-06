@@ -20,7 +20,7 @@ const querySchema = z.object({
 const selectedKeysSchema = z.array(z.string().min(1).max(6827)).min(1).max(1000);
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, locals.i18n.t('Server not found'));
+	if (!locals.server || locals.serverId === null) error(404, locals.i18n.t('Server not found'));
 	const db = resolveDb(params, locals.server);
 	const cursorParam = url.searchParams.get('cursor');
 	const query = querySchema.parse({
@@ -40,7 +40,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const dbsize = Number(await client.dbSize());
 
 	return {
-		serverIndex: locals.serverIndex,
+		serverId: locals.serverId,
 		db,
 		label: serverName(locals.server),
 		cursor: page.cursor,
@@ -59,7 +59,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 export const actions: Actions = {
 	delete: async ({ request, locals, params }) => {
 		const t = locals.i18n.t;
-		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
+		if (!locals.server || locals.serverId === null) error(404, t('Server not found'));
 		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
@@ -74,7 +74,7 @@ export const actions: Actions = {
 		);
 		redirect(
 			303,
-			withParams(`/server/${locals.serverIndex}/db/${db}`, {
+			withParams(`/server/${locals.serverId}/db/${db}`, {
 				filter: String(raw.get('filter') ?? ''),
 				type: String(raw.get('type') ?? ''),
 				view: String(raw.get('view') ?? '')
@@ -82,8 +82,7 @@ export const actions: Actions = {
 		);
 	},
 	flush: async ({ request, locals, params }) => {
-		if (!locals.server || locals.serverIndex === null)
-			error(404, locals.i18n.t('Server not found'));
+		if (!locals.server || locals.serverId === null) error(404, locals.i18n.t('Server not found'));
 		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 		const raw = await request.formData();
@@ -91,7 +90,7 @@ export const actions: Actions = {
 		await flush(client, 'db');
 		redirect(
 			303,
-			withParams(`/server/${locals.serverIndex}/db/${db}`, {
+			withParams(`/server/${locals.serverId}/db/${db}`, {
 				view: String(raw.get('view') ?? '')
 			})
 		);

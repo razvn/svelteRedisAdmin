@@ -1,4 +1,5 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
+import type { ServerEntry } from '#lib/server/servers/types.ts';
 import type { AppConfig, ServerConfig } from '#lib/server/config/schema.ts';
 import type { SessionInfo } from '#lib/server/auth/session.ts';
 import type { RedisConnection } from '#lib/server/redis/connection.ts';
@@ -19,8 +20,15 @@ declare global {
 			locale: string;
 			/** Translator bound to `locale` (server-side `t()` in load functions). */
 			i18n: Translator;
-			/** 1-based… rather 0-based index of the active server in `config.Servers`; null outside server routes. */
-			serverIndex: number | null;
+			/**
+			 * Id of the active server: its position in `config.Servers` (`"0"`…) or, for a server found by
+			 * `ServerDiscovery`, `k8s:<namespace>:<service>`. Null outside server routes.
+			 */
+			serverId: string | null;
+			/** Groups of the person (`header` plugin `headerGroups`), for Kubernetes RBAC. */
+			groups: readonly string[];
+			/** The servers this person may use (login list + RBAC), computed once per request. */
+			servers: () => Promise<ServerEntry[]>;
 			/** Active server definition; null outside server routes. */
 			server: ServerConfig | null;
 			/**

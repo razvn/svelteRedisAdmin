@@ -38,7 +38,7 @@
 	</PageHeader>
 
 	<div class="grid gap-4 lg:grid-cols-2">
-		{#each data.servers as server (server.index)}
+		{#each data.servers as server (server.id)}
 			<Card.Root class="gap-0 py-0" data-testid="server-card">
 				<Card.Header class="flex-row items-center justify-between border-b py-5">
 					<Card.Title class="flex min-w-0 items-center gap-2">
@@ -87,7 +87,7 @@
 						</Alert>
 					{/if}
 					<Card.Footer class="flex justify-end border-0 p-0">
-						<Button href={serverHref(server.index)} size="sm">
+						<Button href={serverHref(server.id)} size="sm">
 							{t('Open server')}
 							<ArrowRight />
 						</Button>

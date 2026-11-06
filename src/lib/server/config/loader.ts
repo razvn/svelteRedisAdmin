@@ -7,7 +7,8 @@ export class ConfigError extends Error {}
  * Parse and validate a raw config. Kept pure (input -> AppConfig) so tests can
  * feed it objects directly.
  *
- * @throws ConfigError when the shape is wrong or `cookieSecret` is missing while `login` is set.
+ * @throws ConfigError when the shape is wrong, `cookieSecret` is missing while `login` is set, no
+ * server can exist, or Kubernetes RBAC / discovery is set without the `header` plugin.
  */
 export function parseConfig(input: unknown): AppConfig {
 	const parsed = appConfigSchema.safeParse(input);
@@ -18,6 +19,23 @@ export function parseConfig(input: unknown): AppConfig {
 		throw new ConfigError(`Invalid configuration: ${issues}`);
 	}
 	const config = parsed.data;
+	if (config.Servers.length === 0 && !config.ServerDiscovery) {
+		throw new ConfigError(
+			'Invalid configuration: Servers needs at least one server (or ServerDiscovery to find them)'
+		);
+	}
+	if (config.auth.plugin !== 'header') {
+		// Kubernetes RBAC needs the identity (user + groups) only the header plugin provides.
+		const index = config.Servers.findIndex((server) => server.authorize);
+		if (index !== -1) {
+			throw new ConfigError(
+				`Invalid configuration: Servers.${index}.authorize needs auth.plugin "header"`
+			);
+		}
+		if (config.ServerDiscovery) {
+			throw new ConfigError('Invalid configuration: ServerDiscovery needs auth.plugin "header"');
+		}
+	}
 	if (config.login && !config.cookieSecret) {
 		throw new ConfigError(
 			'Invalid configuration: cookieSecret (>= 16 chars) is required when login is configured'

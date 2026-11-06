@@ -5,7 +5,7 @@
 
 	interface Props {
 		/** Index of the active server in `config.Servers`. */
-		serverIndex: number;
+		serverId: string;
 		/** Verbose name of the server. */
 		serverLabel: string;
 		db?: number;
@@ -13,7 +13,7 @@
 		key?: string;
 	}
 
-	let { serverIndex, serverLabel, db, key }: Props = $props();
+	let { serverId, serverLabel, db, key }: Props = $props();
 
 	// Never wrap: every crumb ellipsizes, the server label first, then the database, then the key.
 	const ITEM = 'min-w-12 [&:first-child]:min-w-8';
@@ -29,7 +29,7 @@
 	<Breadcrumb.List class="w-full flex-nowrap gap-1.5 sm:gap-1.5">
 		<Breadcrumb.Item class="{ITEM} shrink-[4]">
 			<Breadcrumb.Link
-				href={serverHref(serverIndex)}
+				href={serverHref(serverId)}
 				class={LINK}
 				aria-current={db === undefined ? 'page' : undefined}
 			>
@@ -40,7 +40,7 @@
 			<Breadcrumb.Separator class="shrink-0"><ChevronRight /></Breadcrumb.Separator>
 			<Breadcrumb.Item class="{ITEM} shrink-[2]">
 				<Breadcrumb.Link
-					href={dbHref(serverIndex, db)}
+					href={dbHref(serverId, db)}
 					class={LINK}
 					aria-current={key ? undefined : 'page'}
 				>

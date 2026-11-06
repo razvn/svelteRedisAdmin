@@ -25,9 +25,12 @@ src/
       config/              config.json loader + zod schema (phpRedisAdmin-compatible keys)
       auth/                signed-cookie session (HMAC), login/logout actions
       redis/               connection manager, key-type services, serializers, info/config readers
+      servers/             server registry (configured + Kubernetes-discovered, string ids), RBAC access
+      kubernetes/          minimal API client (ServiceAccount) and SubjectAccessReview authorizer
   routes/                  see ROADMAP "Routing"
 e2e/                       Playwright specs (*.e2e.ts)
 docker/initdb/             seed script for the dev Redis instances
+deploy/kubernetes/         example manifests (app + review environments), see docs/KUBERNETES.md
 config.sample.json         committed sample; config.json is git-ignored (override path: SRA_CONFIG)
 ```
 

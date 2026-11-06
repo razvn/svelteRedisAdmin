@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Single sign-on and Kubernetes - svelteRedisAdmin docs</title>
+		<meta
+			name="description"
+			content="Log people in to svelteRedisAdmin through an SSO proxy, let Kubernetes RBAC decide who may use which Redis, and discover the Redis of review namespaces."
+		/>
+		<meta name="color-scheme" content="light dark" />
+		<meta name="theme-color" content="#6366f1" />
+		<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+		<link rel="canonical" href="https://razvn.github.io/svelteRedisAdmin/docs/kubernetes.html" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+		/>
+		<link rel="stylesheet" href="../styles.css" />
+	</head>
+	<body>
+		<a class="skip" href="#main">Skip to content</a>
+		<header class="site-header">
+			<div class="wrap">
+				<a class="brand" href="../"
+					><img src="../assets/logo.svg" alt="" width="32" height="32" /><span
+						>svelteRedisAdmin</span
+					></a
+				>
+				<nav class="nav" aria-label="Main">
+					<a href="../#features">Features</a>
+					<a href="../#quick-start">Quick start</a>
+					<a class="nav-docs" href="./" aria-current="page">Docs</a>
+					<a class="btn btn-sm" href="https://github.com/razvn/svelteRedisAdmin">GitHub</a>
+				</nav>
+			</div>
+		</header>
+		<div class="wrap docs">
+			<nav class="docs-nav" aria-label="Documentation">
+				<h2>Getting started</h2>
+				<ul>
+					<li><a href="./">Overview</a></li>
+				</ul>
+				<h2>Authentication</h2>
+				<ul>
+					<li><a href="kubernetes.html" aria-current="page">Single sign-on &amp; Kubernetes</a></li>
+				</ul>
+				<div class="docs-toc">
+					<h2>On this page</h2>
+					<ul>
+						<li><a href="#flow">How a request is handled</a></li>
+						<li><a href="#config">Configuration</a></li>
+						<li><a href="#proxies">Proxy setups</a></li>
+						<li><a href="#kubernetes-rbac">Kubernetes RBAC</a></li>
+						<li><a href="#server-discovery">Server discovery</a></li>
+						<li><a href="#container">Running the container</a></li>
+						<li><a href="#security">Security checklist</a></li>
+						<li><a href="#troubleshooting">Troubleshooting</a></li>
+						<li><a href="#limits">Current limits</a></li>
+					</ul>
+				</div>
+			</nav>
+			<main id="main" class="doc">
+				<h1>Single sign-on and Kubernetes</h1>
+				<p>
+					The <code class="inline">header</code> authentication plugin lets an SSO proxy in front of
+					svelteRedisAdmin log people in. The proxy (oauth2-proxy, an ingress
+					<code class="inline">auth-url</code>, Pomerium…) authenticates the person against your
+					identity provider and forwards who they are in HTTP headers. svelteRedisAdmin trusts those
+					headers only when the request comes from the proxy.
+				</p>
+				<p>On Kubernetes, two more pieces build on that identity:</p>
+				<ul>
+					<li>
+						<strong>Kubernetes RBAC</strong> (<code class="inline">authorize</code> on a server): a
+						SubjectAccessReview asks the API server whether the person may use the namespace the
+						Redis lives in. People without the right get a <code class="inline">403</code>.
+					</li>
+					<li>
+						<strong>Server discovery</strong> (<code class="inline">ServerDiscovery</code>): the
+						Redis Services of labelled namespaces (one per merge request, for example) become
+						servers on their own, with the password read from a Secret of the namespace, and RBAC of
+						that namespace deciding who may use them.
+					</li>
+				</ul>
+				<p>Nobody types a Redis password, and the password never reaches the browser.</p>
+				<h2 id="flow">How a request is handled</h2>
+				<ol>
+					<li>
+						The TCP peer of the request (the proxy) must be in
+						<code class="inline">auth.trustedProxies</code>. From any other address the identity
+						headers are ignored, because anyone can send them.
+					</li>
+					<li>
+						The user header (<code class="inline">auth.header</code>) must hold a non-empty name
+						with no control characters and no comma. A comma means the header arrived twice, which
+						happens when a proxy appends instead of replacing.
+					</li>
+					<li>
+						No identity: <code class="inline">401 Authentication required.</code> (the proxy
+						normally redirects to the sign-in page before that).
+					</li>
+					<li>
+						On a server page, the server must be visible to the person: the
+						<code class="inline">servers</code> list (from
+						<code class="inline">auth.headerServers</code>) for configured servers, then Kubernetes
+						RBAC for servers with <code class="inline">authorize</code> (<a href="#kubernetes-rbac"
+							>Kubernetes RBAC</a
+						>). Hidden: <code class="inline">404</code>. Denied: <code class="inline">403</code>.
+						RBAC cannot be checked: <code class="inline">503</code>.
+					</li>
+					<li>
+						The app connects with the server's <code class="inline">auth</code> /
+						<code class="inline">username</code>, or, for a
+						<a href="#server-discovery">discovered server</a>, with the password read from its
+						Secret.
+					</li>
+				</ol>
+				<p>
+					The headers are read again on every request: when the proxy's session ends, access ends.
+					The signed session cookie only caches what the headers said.
+				</p>
+				<p>
+					<code class="inline">/api/health</code> answers <code class="inline">ok</code> without any
+					of this, for liveness and readiness probes.
+				</p>
+				<h2 id="config">Configuration</h2>
+				<pre><code>{
+	&quot;Servers&quot;: [{ &quot;name&quot;: &quot;Shared cache&quot;, &quot;host&quot;: &quot;redis.tools.svc&quot;, &quot;auth&quot;: &quot;secret&quot; }],
+	&quot;auth&quot;: {
+		&quot;plugin&quot;: &quot;header&quot;,
+		&quot;header&quot;: &quot;x-auth-request-user&quot;,
+		&quot;headerGroups&quot;: &quot;x-auth-request-groups&quot;,
+		&quot;trustedProxies&quot;: [&quot;10.42.0.0/16&quot;]
+	},
+	&quot;cookieSecret&quot;: &quot;a-random-string-of-32-characters-or-more&quot;
+}</code></pre>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Key</th>
+								<th>Default</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">auth.plugin</code></td>
+								<td><code class="inline">config</code></td>
+								<td>
+									<code class="inline">header</code> for an SSO proxy. (<code class="inline"
+										>config</code
+									>
+									is the login form, <code class="inline">http</code> HTTP Basic against
+									<code class="inline">login</code>.)
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">auth.header</code></td>
+								<td>none</td>
+								<td>
+									Header with the person's stable id (username). Required with
+									<code class="inline">header</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">auth.trustedProxies</code></td>
+								<td>none</td>
+								<td>
+									IPs or CIDRs (IPv4 or IPv6) of the proxy. Required and non-empty with
+									<code class="inline">header</code>, otherwise the config fails to load.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">auth.headerGroups</code></td>
+								<td>none</td>
+								<td>
+									Header with the person's groups, comma separated. Only used by
+									<a href="#kubernetes-rbac">Kubernetes RBAC</a>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">auth.headerRole</code></td>
+								<td>none</td>
+								<td>
+									Header with the app role: <code class="inline">admin</code>,
+									<code class="inline">rw</code> or <code class="inline">ro</code>. Absent or
+									unknown: <code class="inline">admin</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">auth.headerServers</code></td>
+								<td>none</td>
+								<td>
+									Header with the configured servers the person may see, as positions in
+									<code class="inline">Servers</code> (<code class="inline">0,2</code>). Absent: all
+									of them. Discovered servers are decided by RBAC only.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">cookieSecret</code></td>
+								<td>none</td>
+								<td>Signs the session cookie. Set a random value of 32 characters or more.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<p>
+					<code class="inline">trustedProxies</code> is matched against the direct TCP peer. IPv4
+					peers on a dual-stack socket (<code class="inline">::ffff:10.42.0.7</code>) match IPv4
+					entries. Behind a load balancer that also forwards, list the address the app actually
+					sees.
+				</p>
+				<div class="callout">
+					<p>
+						Upgrading: the <code class="inline">header</code> plugin used to trust its headers from
+						any peer. It now refuses to load without
+						<code class="inline">auth.trustedProxies</code>.
+					</p>
+				</div>
+				<h3 id="roles">Roles</h3>
+				<p>
+					Everyone the proxy lets through gets the <code class="inline">admin</code> role
+					(everything, including CONFIG SET, CLIENT KILL and flush) unless the proxy also sends
+					<code class="inline">auth.headerRole</code>. To give people less, have the proxy (or the
+					ingress in front of the app) set that header to <code class="inline">rw</code> or
+					<code class="inline">ro</code>, for example from a group claim. Like the identity headers,
+					it is only read from a trusted proxy.
+				</p>
+				<h2 id="proxies">Proxy setups</h2>
+				<h3 id="oauth2-proxy-behind-ingress-nginx-auth-request-mode">
+					oauth2-proxy behind ingress-nginx (<code class="inline">auth_request</code> mode)
+				</h3>
+				<p>
+					oauth2-proxy runs with <code class="inline">--set-xauthrequest</code>, and the ingress
+					copies its response headers onto the request sent to svelteRedisAdmin:
+				</p>
+				<pre><code>metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: &#x27;https://$host/oauth2/auth&#x27;
+    nginx.ingress.kubernetes.io/auth-signin: &#x27;https://$host/oauth2/start?rd=$escaped_request_uri&#x27;
+    nginx.ingress.kubernetes.io/auth-response-headers: &#x27;X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Groups&#x27;</code></pre>
+				<p>
+					The peer svelteRedisAdmin sees is the ingress controller pod, so
+					<code class="inline">trustedProxies</code> is the pod network range of the ingress
+					controller. Use <code class="inline">x-auth-request-user</code> and
+					<code class="inline">x-auth-request-groups</code> as header names.
+				</p>
+				<h3 id="oauth2-proxy-as-the-reverse-proxy">oauth2-proxy as the reverse proxy</h3>
+				<p>
+					With oauth2-proxy forwarding straight to svelteRedisAdmin (<code class="inline"
+						>--upstream=http://sra:3000</code
+					>, <code class="inline">--pass-user-headers</code>), the identity arrives as
+					<code class="inline">X-Forwarded-User</code> /
+					<code class="inline">X-Forwarded-Groups</code>:
+				</p>
+				<pre><code>&quot;auth&quot;: {
+	&quot;plugin&quot;: &quot;header&quot;,
+	&quot;header&quot;: &quot;x-forwarded-user&quot;,
+	&quot;headerGroups&quot;: &quot;x-forwarded-groups&quot;,
+	&quot;trustedProxies&quot;: [&quot;10.42.3.17&quot;]
+}</code></pre>
+				<h2 id="kubernetes-rbac">Kubernetes RBAC</h2>
+				<p>
+					On a review environment where every merge request gets its own namespace and its own
+					Redis, the question "may this person use this server?" already has an answer: the RBAC of
+					the namespace. <code class="inline">authorize</code> on a server asks the Kubernetes API
+					server, with a
+					<a
+						href="https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access"
+						>SubjectAccessReview</a
+					>, whether the signed-in person may <code class="inline">get pods</code> (by default) in
+					the server's namespace. People without that right do not see the server, and get a
+					<code class="inline">403</code> if they open its URL.
+				</p>
+				<pre><code>{
+	&quot;Servers&quot;: [
+		{
+			&quot;name&quot;: &quot;review-123&quot;,
+			&quot;host&quot;: &quot;redis.review-123.svc&quot;,
+			&quot;auth&quot;: &quot;secret&quot;,
+			&quot;authorize&quot;: {
+				&quot;type&quot;: &quot;kubernetes-sar&quot;,
+				&quot;namespace&quot;: &quot;review-123&quot;,
+				&quot;resource&quot;: { &quot;group&quot;: &quot;&quot;, &quot;resource&quot;: &quot;pods&quot;, &quot;verb&quot;: &quot;get&quot; },
+				&quot;userPrefix&quot;: &quot;oidc:&quot;,
+				&quot;groupsPrefix&quot;: &quot;oidc:&quot;,
+				&quot;cacheSeconds&quot;: 60
+			}
+		}
+	],
+	&quot;auth&quot;: {
+		&quot;plugin&quot;: &quot;header&quot;,
+		&quot;header&quot;: &quot;x-auth-request-user&quot;,
+		&quot;headerGroups&quot;: &quot;x-auth-request-groups&quot;,
+		&quot;trustedProxies&quot;: [&quot;10.42.0.0/16&quot;]
+	}
+}</code></pre>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Key</th>
+								<th>Default</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">authorize.type</code></td>
+								<td>none</td>
+								<td><code class="inline">kubernetes-sar</code>, the only authoriser so far.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.namespace</code></td>
+								<td>none</td>
+								<td>Namespace whose RBAC decides. Required, a DNS-1123 label.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.resource.group</code></td>
+								<td>empty (core API)</td>
+								<td>API group of the resource.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.resource.resource</code></td>
+								<td><code class="inline">pods</code></td>
+								<td>Resource the person must have the right on.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.resource.verb</code></td>
+								<td><code class="inline">get</code></td>
+								<td>Verb they must be allowed.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.resource.subresource</code></td>
+								<td>none</td>
+								<td>
+									Optional, e.g. <code class="inline">exec</code> with
+									<code class="inline">pods</code> and verb <code class="inline">create</code>, or
+									<code class="inline">proxy</code> with <code class="inline">services</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.userPrefix</code></td>
+								<td>empty</td>
+								<td>
+									Prepended to the identity user. Must equal the API server's
+									<code class="inline">--oidc-username-prefix</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.groupsPrefix</code></td>
+								<td>empty</td>
+								<td>
+									Prepended to each group. Must equal the API server's
+									<code class="inline">--oidc-groups-prefix</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.cacheSeconds</code></td>
+								<td><code class="inline">60</code></td>
+								<td>
+									How long an answer, allowed or denied, is reused.
+									<code class="inline">0</code> asks on every request.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.apiServer</code></td>
+								<td>in cluster</td>
+								<td>
+									<code class="inline"
+										>https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT</code
+									>. <code class="inline">http://</code> works too, e.g.
+									<code class="inline">kubectl proxy</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.tokenFile</code></td>
+								<td>
+									<code class="inline">/var/run/secrets/kubernetes.io/serviceaccount/token</code>
+								</td>
+								<td>
+									Bearer token of the app's ServiceAccount. Read again on every lookup, so projected
+									tokens can rotate.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize.caFile</code></td>
+								<td>
+									<code class="inline">/var/run/secrets/kubernetes.io/serviceaccount/ca.crt</code>
+								</td>
+								<td>
+									CA that signs the API server certificate (<code class="inline">https://</code>
+									only).
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<p>
+					<code class="inline">authorize</code> is only accepted with
+					<code class="inline">auth.plugin: &quot;header&quot;</code>; with another plugin the
+					config fails to load, because only the proxy gives the app an identity Kubernetes knows.
+				</p>
+				<h3 id="naming">Naming must match the cluster</h3>
+				<p>
+					The review asks about <code class="inline">userPrefix + &lt;user header&gt;</code> in the
+					groups <code class="inline">groupsPrefix + &lt;each group&gt;</code> plus
+					<code class="inline">system:authenticated</code>. Those must be the names your
+					RoleBindings use, which are the names the API server gives OIDC users. If the cluster runs
+					with
+					<code class="inline"
+						>--oidc-username-claim=preferred_username --oidc-username-prefix=oidc:
+						--oidc-groups-prefix=oidc:</code
+					>
+					and the proxy forwards the GitLab username and groups, use
+					<code class="inline">&quot;userPrefix&quot;: &quot;oidc:&quot;</code> and
+					<code class="inline">&quot;groupsPrefix&quot;: &quot;oidc:&quot;</code>. Check with
+					<code class="inline"
+						>kubectl auth can-i get pods -n review-123 --as oidc:alice --as-group oidc:my-team</code
+					>.
+				</p>
+				<h3 id="rbac-for-the-app">RBAC for the app</h3>
+				<p>
+					The app's ServiceAccount needs <code class="inline">create</code> on
+					<code class="inline">subjectaccessreviews</code>, which the built-in ClusterRole
+					<code class="inline">system:auth-delegator</code> grants:
+				</p>
+				<pre><code>apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svelteredisadmin
+  namespace: tools
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: svelteredisadmin-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: svelteredisadmin
+    namespace: tools</code></pre>
+				<p>
+					Run the Deployment with
+					<code class="inline">serviceAccountName: svelteredisadmin</code> and keep
+					<code class="inline">automountServiceAccountToken</code> on (the default), so the token
+					and CA appear at the default paths.
+				</p>
+				<h3 id="who">Who may use a namespace</h3>
+				<p>
+					Grant people the right the review checks. Here the GitLab group
+					<code class="inline">my-team</code> may get pods in
+					<code class="inline">review-123</code>, and therefore use the Redis of that namespace:
+				</p>
+				<pre><code>apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: review-123
+rules:
+  - apiGroups: [&#x27;&#x27;]
+    resources: [&#x27;pods&#x27;]
+    verbs: [&#x27;get&#x27;]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: my-team-pod-reader
+  namespace: review-123
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pod-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: oidc:my-team</code></pre>
+				<p>
+					The built-in ClusterRole <code class="inline">view</code>, bound with a RoleBinding in the
+					namespace, works as well.
+				</p>
+				<h3 id="caching">Caching and failures</h3>
+				<ul>
+					<li>
+						Answers are cached in memory per API server, namespace, resource, user and set of
+						groups, for <code class="inline">cacheSeconds</code>. A RoleBinding you remove takes
+						effect after at most that delay. Identical lookups that arrive together share one
+						request.
+					</li>
+					<li>
+						Errors are never cached. If the API server is unreachable, answers with an error status,
+						an unreadable body, or does not answer within 5 seconds, opening the server fails closed
+						with <code class="inline">503 Cannot verify your access right now.</code> The cause goes
+						to the server log, never the token.
+					</li>
+					<li>
+						In the sidebar, the server switcher and on the home page, a server whose check fails is
+						hidden.
+					</li>
+					<li>The check runs before any Redis connection is opened.</li>
+				</ul>
+				<h2 id="server-discovery">Server discovery</h2>
+				<p>
+					With one Redis per merge request, listing every review environment in
+					<code class="inline">Servers</code> does not scale.
+					<code class="inline">ServerDiscovery</code> asks the Kubernetes API which namespaces and
+					Redis Services exist, and offers each one as a server. The password is read from a Secret
+					of the namespace, and RBAC of the same namespace decides who may use it. The check is on
+					by default.
+				</p>
+				<pre><code>{
+	&quot;Servers&quot;: [],
+	&quot;auth&quot;: {
+		&quot;plugin&quot;: &quot;header&quot;,
+		&quot;header&quot;: &quot;x-auth-request-user&quot;,
+		&quot;headerGroups&quot;: &quot;x-auth-request-groups&quot;,
+		&quot;trustedProxies&quot;: [&quot;10.42.0.0/16&quot;]
+	},
+	&quot;cookieSecret&quot;: &quot;a-random-string-of-32-characters-or-more&quot;,
+	&quot;ServerDiscovery&quot;: {
+		&quot;type&quot;: &quot;kubernetes&quot;,
+		&quot;namespaceSelector&quot;: &quot;env=review&quot;,
+		&quot;serviceSelector&quot;: &quot;app.kubernetes.io/name=redis&quot;,
+		&quot;port&quot;: &quot;redis&quot;,
+		&quot;name&quot;: &quot;{namespace}: {annotation:gitlab.com/mr-title}&quot;,
+		&quot;secret&quot;: { &quot;name&quot;: &quot;redis-auth&quot;, &quot;passwordKey&quot;: &quot;redis-password&quot; },
+		&quot;authorize&quot;: { &quot;userPrefix&quot;: &quot;oidc:&quot;, &quot;groupsPrefix&quot;: &quot;oidc:&quot; },
+		&quot;server&quot;: { &quot;databases&quot;: 16, &quot;separator&quot;: &quot;:&quot; }
+	}
+}</code></pre>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Key</th>
+								<th>Default</th>
+								<th>Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">type</code></td>
+								<td>none</td>
+								<td><code class="inline">kubernetes</code>, the only provider so far.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">namespaceSelector</code></td>
+								<td>none</td>
+								<td>
+									Label selector of the namespaces to look in, e.g.
+									<code class="inline">env=review</code>. Required.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">serviceSelector</code></td>
+								<td>none</td>
+								<td>Label selector of the Redis Services in them. Required.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">port</code></td>
+								<td><code class="inline">redis</code></td>
+								<td>
+									Service port, by name or number. A name the Service lacks falls back to its only
+									port; Services with several ports and none matching are skipped.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">host</code></td>
+								<td><code class="inline">{service}.{namespace}.svc</code></td>
+								<td>Host the app connects to.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">name</code></td>
+								<td><code class="inline">{namespace}</code></td>
+								<td>
+									Name shown in the sidebar and switcher. Blank after filling:
+									<code class="inline">&lt;namespace&gt;/&lt;service&gt;</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">secret.name</code></td>
+								<td>none</td>
+								<td>
+									Secret in the namespace that holds the password. Required when
+									<code class="inline">secret</code> is set.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">secret.passwordKey</code></td>
+								<td>none</td>
+								<td>
+									Key of the Secret with the password (<code class="inline">requirepass</code>, or
+									the ACL user's password). Required when <code class="inline">secret</code> is set.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">secret.usernameKey</code></td>
+								<td>none</td>
+								<td>
+									Key of the Secret with a Redis 6+ ACL user name. Absent: the
+									<code class="inline">default</code> user.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">secret</code></td>
+								<td>none</td>
+								<td>Leave it out for Redis without a password.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">authorize</code></td>
+								<td><code class="inline">get pods</code></td>
+								<td>
+									The RBAC question of <a href="#kubernetes-rbac">Kubernetes RBAC</a> without
+									<code class="inline">namespace</code> and API access keys, asked in each server's
+									own namespace. <code class="inline">false</code> lets in everyone the proxy lets
+									through.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">refreshSeconds</code></td>
+								<td><code class="inline">30</code></td>
+								<td>How long the server list and each Secret are reused. At least 5.</td>
+							</tr>
+							<tr>
+								<td><code class="inline">server</code></td>
+								<td><code class="inline">{}</code></td>
+								<td>
+									Settings of every discovered server: <code class="inline">db</code>,
+									<code class="inline">databases</code>, <code class="inline">filter</code>,
+									<code class="inline">separator</code>, <code class="inline">tls</code>. Other keys
+									fail the config.
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<code class="inline">apiServer</code>, <code class="inline">tokenFile</code>,
+									<code class="inline">caFile</code>
+								</td>
+								<td>in cluster</td>
+								<td>As for <code class="inline">authorize</code>.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<p>
+					<code class="inline">host</code>, <code class="inline">name</code> and
+					<code class="inline">secret.name</code> accept <code class="inline">{namespace}</code>,
+					<code class="inline">{service}</code>, <code class="inline">{label:&lt;key&gt;}</code> and
+					<code class="inline">{annotation:&lt;key&gt;}</code>. Labels and annotations are the
+					namespace's own. A missing one fills in as empty.
+				</p>
+				<p>
+					<code class="inline">ServerDiscovery</code> is only accepted with
+					<code class="inline">auth.plugin: &quot;header&quot;</code>. With it,
+					<code class="inline">Servers</code> may be empty.
+				</p>
+				<p>
+					Ready-made manifests (the app with this config and RBAC, two example review environments)
+					and a local walkthrough are in
+					<a href="https://github.com/razvn/svelteRedisAdmin/tree/main/deploy/kubernetes"
+						>deploy/kubernetes</a
+					>.
+				</p>
+				<h3 id="discovered">How discovered servers behave</h3>
+				<ul>
+					<li>
+						They come after the servers of <code class="inline">Servers</code>, sorted by namespace
+						and Service. Configured servers keep their position as id, so
+						<code class="inline">/server/0</code> and login
+						<code class="inline">servers</code> lists keep working. A discovered server is named by
+						its id, <code class="inline">k8s:&lt;namespace&gt;:&lt;service&gt;</code>:
+						<code class="inline">/server/k8s:review-123:redis</code> opens it.
+					</li>
+					<li>
+						A server that disappeared (merged MR, deleted namespace) is no longer offered, and its
+						URL answers <code class="inline">404</code>.
+					</li>
+					<li>
+						The sidebar, the server switcher and the home page list only the servers whose RBAC lets
+						the person in. Each check is the same cached review as opening the server makes.
+					</li>
+					<li>
+						Two API calls list the namespaces and the Services, at most once per
+						<code class="inline">refreshSeconds</code>. The first request waits for the list; later
+						ones get the current list while a newer one loads in the background. If a refresh fails,
+						the previous list stays in use and the error goes to the server log.
+					</li>
+					<li>
+						A Secret is read when a request needs that server, and kept in memory for
+						<code class="inline">refreshSeconds</code>. It never goes into a cookie, a page or a
+						log.
+					</li>
+					<li>
+						If the first listing fails, the configured servers are still listed. Opening a
+						discovered server then answers
+						<code class="inline">503 Cannot list the Redis servers right now.</code> If the Secret
+						cannot be read:
+						<code class="inline">503 Cannot read the password of this server right now.</code>
+						<code class="inline">/api/health</code> answers in all cases, so probes do not depend on
+						the API server.
+					</li>
+				</ul>
+				<h3 id="rbac-for-discovery">RBAC for discovery</h3>
+				<p>
+					On top of <code class="inline">system:auth-delegator</code> (see
+					<a href="#rbac-for-the-app">RBAC for the app</a>), the ServiceAccount needs to list
+					namespaces and Services cluster-wide, and to read the Redis Secret in the review
+					namespaces. Restrict the Secret right to its name:
+				</p>
+				<pre><code>apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: svelteredisadmin-discovery
+rules:
+  - apiGroups: [&#x27;&#x27;]
+    resources: [&#x27;namespaces&#x27;, &#x27;services&#x27;]
+    verbs: [&#x27;list&#x27;]
+  - apiGroups: [&#x27;&#x27;]
+    resources: [&#x27;secrets&#x27;]
+    resourceNames: [&#x27;redis-auth&#x27;]
+    verbs: [&#x27;get&#x27;]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: svelteredisadmin-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: svelteredisadmin-discovery
+subjects:
+  - kind: ServiceAccount
+    name: svelteredisadmin
+    namespace: tools</code></pre>
+				<p>
+					A ClusterRoleBinding lets the app read <code class="inline">redis-auth</code> in every
+					namespace. To limit it to the review namespaces, bind the ClusterRole with a RoleBinding
+					in each of them instead, from the pipeline that creates the namespace. The list rights
+					still need the ClusterRoleBinding.
+				</p>
+				<h2 id="container">Running the container</h2>
+				<pre><code>docker build -t svelteredisadmin .</code></pre>
+				<pre><code>docker run -p 3000:3000 -v &quot;$PWD/config.json:/config/config.json:ro&quot; svelteredisadmin</code></pre>
+				<p>
+					The image reads <code class="inline">/config/config.json</code> (<code class="inline"
+						>SRA_CONFIG</code
+					>), listens on port 3000 and runs as user 1000. Behind a proxy that terminates TLS, set
+					<code class="inline">PROTOCOL_HEADER=x-forwarded-proto</code> so form posts pass the
+					origin check.
+				</p>
+				<h2 id="security">Security checklist</h2>
+				<p>Trusted headers are only as safe as the network path in front of the app.</p>
+				<ul>
+					<li>
+						<strong>The app must be unreachable except through the proxy.</strong> Bind the Service
+						to <code class="inline">ClusterIP</code> (or <code class="inline">127.0.0.1</code>), and
+						add a NetworkPolicy or firewall rule that only lets the proxy in. If a person can reach
+						the app from an address listed in <code class="inline">trustedProxies</code>, they can
+						be anyone.
+					</li>
+					<li>
+						**Keep <code class="inline">trustedProxies</code> tight.** Prefer the proxy's own
+						addresses over a whole private range.
+					</li>
+					<li>
+						<strong>Make the proxy overwrite the identity headers</strong>, never pass
+						client-supplied ones through. Test it: send
+						<code class="inline">X-Auth-Request-User: someone-else</code> through the proxy and
+						check the user menu.
+					</li>
+					<li>
+						<strong>Decide the role.</strong> Without <code class="inline">auth.headerRole</code>,
+						everyone signed in is <code class="inline">admin</code> on the servers they can see.
+					</li>
+					<li>
+						<strong>The Redis password is shared.</strong> Everyone signed in acts with it. Give a
+						Redis 6+ ACL user only the commands the team needs (<code class="inline"
+							>secret.usernameKey</code
+						>).
+					</li>
+					<li>Enforce MFA in the identity provider: the app does no second factor of its own.</li>
+				</ul>
+				<h2 id="troubleshooting">Troubleshooting</h2>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>Symptom</th>
+								<th>Cause</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>Config fails to load, <code class="inline">auth.trustedProxies</code></td>
+								<td>
+									Missing or empty with the <code class="inline">header</code> plugin, or an entry
+									that is not an IP or CIDR.
+								</td>
+							</tr>
+							<tr>
+								<td>Always <code class="inline">401 Authentication required.</code></td>
+								<td>
+									The peer is not in <code class="inline">trustedProxies</code> (check the address
+									the app sees, IPv6 included), the user header name does not match, or the header
+									is empty or duplicated.
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<code class="inline"
+										>403 You do not have access to this server (Kubernetes namespace …)</code
+									>
+								</td>
+								<td>
+									RBAC denies the person. Check the RoleBinding and the prefixes with
+									<code class="inline">kubectl auth can-i … --as … --as-group …</code>. A fix shows
+									after <code class="inline">cacheSeconds</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">503 Cannot verify your access right now.</code></td>
+								<td>
+									The SubjectAccessReview failed; the server log says why. Common causes: no
+									<code class="inline">system:auth-delegator</code> binding (HTTP 403 from the API),
+									<code class="inline">apiServer</code> unset outside a cluster, unreadable
+									<code class="inline">tokenFile</code> / <code class="inline">caFile</code>.
+								</td>
+							</tr>
+							<tr>
+								<td>A server is missing from the sidebar</td>
+								<td>
+									RBAC denies the person, or its check failed (server log). For a discovered one:
+									its namespace or Service lacks the selector labels, the Service has several ports
+									and none named <code class="inline">port</code>, or the list is younger than
+									<code class="inline">refreshSeconds</code>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">503 Cannot list the Redis servers right now.</code></td>
+								<td>
+									The first listing failed: no <code class="inline">list</code> right on namespaces
+									or Services (HTTP 403 in the server log), or the API server is unreachable.
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<code class="inline">503 Cannot read the password of this server right now.</code>
+								</td>
+								<td>
+									No <code class="inline">get</code> right on the Secret, the Secret does not exist,
+									or it lacks <code class="inline">secret.passwordKey</code> /
+									<code class="inline">secret.usernameKey</code>.
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Home page card shows <code class="inline">Cannot connect to …: WRONGPASS</code> or
+									<code class="inline">NOAUTH</code>
+								</td>
+								<td>
+									The Secret holds another password than the Redis uses, or
+									<code class="inline">secret</code> is missing for a Redis with a password.
+								</td>
+							</tr>
+							<tr>
+								<td>
+									Config fails to load,
+									<code class="inline"
+										>Servers.N.authorize needs auth.plugin &quot;header&quot;</code
+									>
+								</td>
+								<td>
+									<code class="inline">authorize</code> or
+									<code class="inline">ServerDiscovery</code> set with the
+									<code class="inline">config</code> or <code class="inline">http</code> plugin.
+								</td>
+							</tr>
+							<tr>
+								<td>Config fails to load, <code class="inline">ServerDiscovery…</code></td>
+								<td>
+									A required key is missing (<code class="inline">namespaceSelector</code>,
+									<code class="inline">serviceSelector</code>,
+									<code class="inline">secret.name</code>,
+									<code class="inline">secret.passwordKey</code>), a template uses another
+									placeholder, or <code class="inline">server</code> sets a key discovery fills in.
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<h2 id="limits">Current limits</h2>
+				<ul>
+					<li>
+						The role is per person, not per server:
+						<code class="inline">auth.headerRole</code> applies to every server the person sees.
+					</li>
+					<li>
+						Redis only sees the shared password (or ACL user). Its own logs cannot tell people
+						apart.
+					</li>
+					<li>
+						Without <code class="inline">authorize</code> (or with
+						<code class="inline">ServerDiscovery.authorize: false</code>), authorisation is
+						all-or-nothing: whoever the proxy lets through gets the server.
+					</li>
+					<li>
+						Caches (server list, Secrets, RBAC answers) are per process. With several replicas, each
+						one asks the API server on its own, and a change can show on one replica before another.
+					</li>
+					<li>
+						Discovery polls; it does not watch. A new review environment appears within
+						<code class="inline">refreshSeconds</code>.
+					</li>
+				</ul>
+			</main>
+		</div>
+		<footer class="site-footer">
+			<div class="wrap">
+				<div>
+					<a class="brand" href="../"
+						><img src="../assets/logo.svg" alt="" width="28" height="28" /><span
+							>svelteRedisAdmin</span
+						></a
+					>
+					<p style="margin-top: 0.75rem">
+						svelteRedisAdmin is an independent project and is not affiliated with Redis Ltd. Redis
+						is a trademark of Redis Ltd; phpRedisAdmin is a project of its respective owners.
+					</p>
+				</div>
+				<ul>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin">Source on GitHub</a></li>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin/issues">Issues</a></li>
+					<li>
+						<a href="https://github.com/razvn/svelteRedisAdmin/blob/main/LICENSE"
+							>GPL-2.0-or-later</a
+						>
+					</li>
+				</ul>
+			</div>
+		</footer>
+	</body>
+</html>

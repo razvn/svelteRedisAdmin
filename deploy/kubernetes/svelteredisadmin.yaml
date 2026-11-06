@@ -1,0 +1,137 @@
+# svelteRedisAdmin in its own namespace, with Kubernetes server discovery and RBAC checks.
+# See deploy/kubernetes/README.md and docs/KUBERNETES.md ("Kubernetes RBAC", "Server discovery").
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tools
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svelteredisadmin
+  namespace: tools
+---
+# SubjectAccessReviews: "may this person use the Redis of that namespace?"
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: svelteredisadmin-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: svelteredisadmin
+    namespace: tools
+---
+# Discovery: list namespaces and Services, read only the Secret named redis-auth.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: svelteredisadmin-discovery
+rules:
+  - apiGroups: ['']
+    resources: ['namespaces', 'services']
+    verbs: ['list']
+  - apiGroups: ['']
+    resources: ['secrets']
+    resourceNames: ['redis-auth']
+    verbs: ['get']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: svelteredisadmin-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: svelteredisadmin-discovery
+subjects:
+  - kind: ServiceAccount
+    name: svelteredisadmin
+    namespace: tools
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: svelteredisadmin
+  namespace: tools
+data:
+  # trustedProxies: 127.0.0.1 and ::1 only trust `kubectl port-forward` (local try-out). Behind a real
+  # SSO proxy, put the proxy pods' addresses here instead, and change cookieSecret (better: mount the
+  # config from a Secret).
+  config.json: |
+    {
+      "Servers": [],
+      "auth": {
+        "plugin": "header",
+        "header": "x-auth-request-user",
+        "headerGroups": "x-auth-request-groups",
+        "trustedProxies": ["127.0.0.1", "::1"]
+      },
+      "cookieSecret": "change-me-change-me-change-me-change-me",
+      "ServerDiscovery": {
+        "type": "kubernetes",
+        "namespaceSelector": "env=review",
+        "serviceSelector": "app.kubernetes.io/name=redis",
+        "name": "{namespace}: {annotation:gitlab.com/mr-title}",
+        "secret": { "name": "redis-auth", "passwordKey": "redis-password" },
+        "authorize": { "userPrefix": "oidc:", "groupsPrefix": "oidc:" }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svelteredisadmin
+  namespace: tools
+spec:
+  selector:
+    matchLabels:
+      app: svelteredisadmin
+  template:
+    metadata:
+      labels:
+        app: svelteredisadmin
+    spec:
+      serviceAccountName: svelteredisadmin
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: app
+          image: svelteredisadmin:dev
+          # The image built locally (`docker build -t svelteredisadmin:dev .`); use your registry's otherwise.
+          imagePullPolicy: Never
+          env:
+            # The SSO proxy terminates TLS and says so in this header (adapter-node checks the origin).
+            - name: PROTOCOL_HEADER
+              value: x-forwarded-proto
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          configMap:
+            name: svelteredisadmin
+---
+# ClusterIP only: the app must be reachable through the SSO proxy alone.
+apiVersion: v1
+kind: Service
+metadata:
+  name: svelteredisadmin
+  namespace: tools
+spec:
+  selector:
+    app: svelteredisadmin
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -9,7 +9,7 @@ import type { AuthPlugin } from './types.ts';
  * Resolve the authentication plugin named by `config.auth.plugin`.
  *
  * @throws ConfigError at load time for an unknown plugin name or a `header`
- * plugin without its identity header configured.
+ * plugin without its identity header or trusted proxies configured.
  */
 export function getAuthPlugin(config: AppConfig): AuthPlugin {
 	switch (config.auth.plugin) {
@@ -21,6 +21,11 @@ export function getAuthPlugin(config: AppConfig): AuthPlugin {
 			if (!config.auth.header) {
 				throw new ConfigError(
 					'Invalid configuration: auth.header is required when auth.plugin is "header"'
+				);
+			}
+			if (config.auth.trustedProxies.length === 0) {
+				throw new ConfigError(
+					'Invalid configuration: auth.trustedProxies (IPs or CIDRs of the proxy) is required when auth.plugin is "header"'
 				);
 			}
 			return headerPlugin;

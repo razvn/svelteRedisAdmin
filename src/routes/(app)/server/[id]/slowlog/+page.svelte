@@ -21,13 +21,13 @@
 	const i18n = useI18n();
 	const t = $derived(i18n.t);
 
-	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
+	const hrefFor = (tab: TabDef) => serverTabHref(data.serverId, tabSubPath(tab.id));
 </script>
 
 <svelte:head><title>{t('Slow log')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-slowlog">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.serverLabel} />
 	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('slowlog')} {hrefFor} />
 	<PageHeader title={t('Slow log')} description={t('SLOWLOG GET — slowest commands')} icon={Clock}>
 		{#snippet actions()}

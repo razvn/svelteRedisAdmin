@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import type { HttpError } from '@sveltejs/kit';
 import {
 	assertAdmin,
-	assertServerAccess,
 	assertWrite,
 	canAccessServer,
 	canAdmin,
@@ -22,7 +21,6 @@ const session = (overrides: Partial<SessionInfo> = {}): SessionInfo => ({
 
 const locals = (partial: Partial<GuardLocals> = {}): GuardLocals => ({
 	session: session(),
-	serverIndex: null,
 	i18n: { t: (msgid: string) => msgid },
 	...partial
 });
@@ -99,22 +97,5 @@ describe('guards', () => {
 			expect((caught as HttpError).status).toBe(403);
 			expect((caught as HttpError).body.message).toBe('Admin access required.');
 		}
-	});
-
-	test('assertServerAccess 404s servers outside the session visibility', () => {
-		try {
-			assertServerAccess(locals({ session: session({ servers: [1] }), serverIndex: 0 }));
-			expect.unreachable();
-		} catch (caught) {
-			expect((caught as HttpError).status).toBe(404);
-			expect((caught as HttpError).body.message).toBe('Server not found');
-		}
-	});
-
-	test('assertServerAccess passes for visible servers and outside server routes', () => {
-		expect(() =>
-			assertServerAccess(locals({ session: session({ servers: [1] }), serverIndex: 1 }))
-		).not.toThrow();
-		expect(() => assertServerAccess(locals({ serverIndex: null }))).not.toThrow();
 	});
 });

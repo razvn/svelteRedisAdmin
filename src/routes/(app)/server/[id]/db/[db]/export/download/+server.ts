@@ -8,7 +8,7 @@ const formSchema = z.object({ filter: z.string().max(512).catch('') });
 
 /** POST a downloadable JSON dump of the database (optionally filtered). */
 export const POST: RequestHandler = async ({ locals, params, request }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, 'Server not found');
+	if (!locals.server || locals.serverId === null) error(404, 'Server not found');
 	const db = resolveDb(params, locals.server);
 	const raw = await request.formData();
 	const parsed = formSchema.parse({ filter: String(raw.get('filter') ?? '') });

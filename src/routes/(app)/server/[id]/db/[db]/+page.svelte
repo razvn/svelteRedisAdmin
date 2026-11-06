@@ -46,14 +46,14 @@
 	let selectedCount = $state(0);
 
 	const prevHref = $derived(
-		withParams(dbHref(data.serverIndex, data.db), {
+		withParams(dbHref(data.serverId, data.db), {
 			filter: data.filter,
 			type: data.type,
 			view: data.view
 		})
 	);
 	const nextHref = $derived(
-		withParams(dbHref(data.serverIndex, data.db), {
+		withParams(dbHref(data.serverId, data.db), {
 			cursor: data.cursor,
 			filter: data.filter,
 			type: data.type,
@@ -63,7 +63,7 @@
 
 	/** Same page with the other browser view, keeping filter/type/cursor. */
 	function viewHref(view: 'list' | 'tree') {
-		return withParams(dbHref(data.serverIndex, data.db), {
+		return withParams(dbHref(data.serverId, data.db), {
 			view,
 			filter: data.filter,
 			type: data.type,
@@ -107,13 +107,13 @@
 <svelte:head><title>db{data.db} — svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="key-browser">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.label} db={data.db} />
 
 	<TabBar
 		label={t('Database')}
 		tabs={DB_TABS}
 		current=""
-		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
+		hrefFor={(tab) => dbTabHref(data.serverId, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader
@@ -123,7 +123,7 @@
 	>
 		{#snippet actions()}
 			{#if data.canWrite}
-				<Button href={dbTabHref(data.serverIndex, data.db, 'new-key')} size="sm">
+				<Button href={dbTabHref(data.serverId, data.db, 'new-key')} size="sm">
 					<Plus />
 					{t('New key')}
 				</Button>
@@ -158,7 +158,7 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<form
 					method="GET"
-					action={dbHref(data.serverIndex, data.db)}
+					action={dbHref(data.serverId, data.db)}
 					class="flex flex-wrap items-center gap-2"
 				>
 					<Input
@@ -179,7 +179,7 @@
 					<Button
 						variant="ghost"
 						size="sm"
-						href={withParams(dbHref(data.serverIndex, data.db), {
+						href={withParams(dbHref(data.serverId, data.db), {
 							type: data.type,
 							view: data.view
 						})}
@@ -298,7 +298,7 @@
 									>
 										{#if item?.key.kind === 'text'}
 											<a
-												href={resolve(bare(keyHref(data.serverIndex, data.db, keyText)))}
+												href={resolve(bare(keyHref(data.serverId, data.db, keyText)))}
 												class="truncate font-mono text-foreground hover:text-primary hover:underline"
 											>
 												{keyText}
@@ -363,7 +363,7 @@
 										<Table.Cell class="max-w-0">
 											{#if item.key.kind === 'text'}
 												<a
-													href={resolve(bare(keyHref(data.serverIndex, data.db, keyText)))}
+													href={resolve(bare(keyHref(data.serverId, data.db, keyText)))}
 													class="block truncate font-mono text-foreground hover:text-primary hover:underline"
 												>
 													{keyText}

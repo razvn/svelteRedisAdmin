@@ -12,7 +12,7 @@ const runSchema = z.object({
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.server) error(404, locals.i18n.t('Server not found'));
-	const serverIndex = locals.serverIndex ?? 0;
+	const serverId = locals.serverId ?? '0';
 	const serverLabel = serverName(locals.server);
 	const db = locals.server.db;
 
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		redisVersion = null;
 	}
 
-	return { serverIndex, serverLabel, db, redisVersion, canWrite: canWrite(locals.session) };
+	return { serverId, serverLabel, db, redisVersion, canWrite: canWrite(locals.session) };
 };
 
 export interface ConsoleResultView extends ConsoleResult {

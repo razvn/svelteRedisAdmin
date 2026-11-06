@@ -9,10 +9,10 @@ const MAX_UPLOAD = 64 * 1024 * 1024;
 const MAX_SHOWN_ERRORS = 50;
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-	if (!locals.server || locals.serverIndex === null) error(404, locals.i18n.t('Server not found'));
+	if (!locals.server || locals.serverId === null) error(404, locals.i18n.t('Server not found'));
 	const db = resolveDb(params, locals.server);
 	return {
-		serverIndex: locals.serverIndex,
+		serverId: locals.serverId,
 		db,
 		label: serverName(locals.server),
 		canWrite: canWrite(locals.session)
@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 export const actions: Actions = {
 	import: async ({ request, locals, params }) => {
 		const t = locals.i18n.t;
-		if (!locals.server || locals.serverIndex === null) error(404, t('Server not found'));
+		if (!locals.server || locals.serverId === null) error(404, t('Server not found'));
 		assertWrite(locals);
 		const db = resolveDb(params, locals.server);
 

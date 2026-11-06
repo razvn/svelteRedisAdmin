@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const rows = [...clients].sort((a, b) => Number(a['id'] ?? 0) - Number(b['id'] ?? 0));
 
 	return {
-		serverIndex: locals.serverIndex ?? 0,
+		serverId: locals.serverId ?? '0',
 		serverLabel: serverName(locals.server),
 		clients: rows,
 		canWrite: canWrite(locals.session)
@@ -43,6 +43,6 @@ export const actions: Actions = {
 			return fail(400, { error: t('CLIENT KILL failed for id {id}.', { id: parsed.data.id }) });
 		}
 
-		redirect(303, `/server/${locals.serverIndex ?? 0}/clients`);
+		redirect(303, `/server/${locals.serverId ?? '0'}/clients`);
 	}
 };

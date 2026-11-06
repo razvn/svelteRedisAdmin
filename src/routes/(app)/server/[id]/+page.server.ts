@@ -23,7 +23,7 @@ export interface OverviewStats {
 }
 
 export interface OverviewData {
-	serverIndex: number;
+	serverId: string;
 	serverLabel: string;
 	online: boolean;
 	error: string | null;
@@ -34,7 +34,7 @@ export interface OverviewData {
 export const load: PageServerLoad = async ({ locals }): Promise<OverviewData> => {
 	const t = locals.i18n.t;
 	if (!locals.server) error(404, t('Server not found'));
-	const serverIndex = locals.serverIndex ?? 0;
+	const serverId = locals.serverId ?? '0';
 	const serverLabel = serverName(locals.server);
 	const server = locals.server;
 
@@ -54,7 +54,7 @@ export const load: PageServerLoad = async ({ locals }): Promise<OverviewData> =>
 		const lastSave = num('rdb_last_save_time');
 
 		return {
-			serverIndex,
+			serverId,
 			serverLabel,
 			online: true,
 			error: null,
@@ -78,7 +78,7 @@ export const load: PageServerLoad = async ({ locals }): Promise<OverviewData> =>
 		};
 	} catch (caught) {
 		return {
-			serverIndex,
+			serverId,
 			serverLabel,
 			online: false,
 			error: connectionErrorLabel(server, caught),

@@ -2,11 +2,12 @@ import { createConnection, connectionErrorLabel } from '#lib/server/redis/connec
 import { getServerInfo, infoValue } from '#lib/server/redis/server.ts';
 import type { ServerConfig } from '#lib/server/config/schema.ts';
 import { serverName } from '#lib/server/config/schema.ts';
-import { canAccessServer } from '#lib/server/auth/access.ts';
+import { connectionSettings } from '#lib/server/servers/index.ts';
 import type { PageServerLoad } from './$types';
 
 export interface ServerSummary {
-	index: number;
+	/** Server id (position in `Servers`, or `k8s:<namespace>:<service>`). */
+	id: string;
 	label: string;
 	online: boolean;
 	error?: string;
@@ -38,14 +39,14 @@ async function probe(server: ServerConfig): Promise<Partial<ServerSummary>> {
 }
 
 export const load: PageServerLoad = async ({ locals }) => {
-	// Hidden servers are neither listed nor probed (same rule as the sidebar and assertServerAccess).
-	const visible = locals.config.Servers.map((server, index) => ({ server, index })).filter(
-		({ index }) => canAccessServer(locals.session, index)
-	);
+	// Only the servers this person may use are listed and probed (same rule as the sidebar).
+	const visible = await locals.servers();
 	const summaries: ServerSummary[] = await Promise.all(
-		visible.map(async ({ server, index }) => {
-			const base: ServerSummary = { index, label: serverName(server), online: false };
+		visible.map(async (entry) => {
+			const base: ServerSummary = { id: entry.id, label: serverName(entry.server), online: false };
+			let server: ServerConfig = entry.server;
 			try {
+				server = await connectionSettings(locals.config, entry);
 				return { ...base, online: true, ...(await probe(server)) };
 			} catch (error) {
 				return { ...base, error: connectionErrorLabel(server, error) };

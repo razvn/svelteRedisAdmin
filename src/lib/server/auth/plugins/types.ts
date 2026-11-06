@@ -9,6 +9,8 @@ export interface PluginSession {
 	role?: Role;
 	/** Server indexes the user may see; `null`/absent = all servers. */
 	servers?: number[] | null;
+	/** Groups of the person (`header` plugin), for Kubernetes RBAC. */
+	groups?: string[];
 }
 
 export interface AuthPlugin {
@@ -18,5 +20,7 @@ export interface AuthPlugin {
 		request: Request;
 		cookies: Cookies;
 		config: AppConfig;
+		/** Direct TCP peer of the request (the proxy, behind one); null when unknown. */
+		peerAddress: string | null;
 	}): Promise<PluginSession | null>;
 }

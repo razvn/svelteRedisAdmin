@@ -1,15 +1,27 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { loadConfigOnce } from '#lib/server/config/loader.ts';
 import {
 	createSessionToken,
 	parseSessionToken,
 	type SessionInfo
 } from '#lib/server/auth/session.ts';
-import { assertServerAccess, resolveServers } from '#lib/server/auth/access.ts';
+import { resolveServers } from '#lib/server/auth/access.ts';
 import { getAuthPlugin } from '#lib/server/auth/plugins/index.ts';
 import type { AuthPlugin } from '#lib/server/auth/plugins/types.ts';
 import { createConnection } from '#lib/server/redis/connection.ts';
+import {
+	configuredServers,
+	connectionSettings,
+	findServer,
+	listServers,
+	type ServerEntry
+} from '#lib/server/servers/index.ts';
+import {
+	assertServerAccess,
+	checkServerAccess,
+	visibleServers
+} from '#lib/server/servers/access.ts';
 import { applyLocale, fillHtmlLang } from '#lib/server/i18n/locale.ts';
 import type { AppConfig } from '#lib/server/config/schema.ts';
 import type { RedisConnection } from '#lib/server/redis/connection.ts';
@@ -19,7 +31,11 @@ const getConfig = loadConfigOnce(process.env['SRA_CONFIG']);
 /** Routes reachable without a session (config plugin only). */
 const PUBLIC_PATHS = new Set(['/login', '/logout']);
 
+/** Liveness/readiness probe: answers without config, session or Kubernetes API. */
+const HEALTH_PATH = '/api/health';
+
 export const handle: Handle = async ({ event, resolve }) => {
+	if (event.url.pathname === HEALTH_PATH) return resolve(event);
 	const locals = event.locals as typeof event.locals;
 
 	let config: AppConfig | undefined;
@@ -42,15 +58,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const loginCount = config?.login?.length ?? 0;
 	locals.authRequired = config ? !(config.auth.plugin === 'config' && loginCount === 0) : false;
 
+	let peerAddress: string | null;
+	try {
+		peerAddress = event.getClientAddress();
+	} catch {
+		peerAddress = null;
+	}
+
 	let session: SessionInfo | null = null;
+	let groups: readonly string[] = [];
 	if (config && plugin && !locals.configError) {
 		if (config.auth.plugin !== 'config' || loginCount > 0) {
 			const facts = await plugin.authenticate({
 				request: event.request,
 				cookies: event.cookies,
-				config
+				config,
+				peerAddress
 			});
 			if (facts) {
+				groups = facts.groups ?? [];
 				const role = facts.role ?? 'admin';
 				const servers = resolveServers(config, facts.servers ?? null);
 				// Reuse the cached cookie session when it matches the plugin's facts.
@@ -101,8 +127,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 	locals.session = session;
-	// Locals fields are undefined unless initialized — `serverIndex === null` checks rely on this.
-	locals.serverIndex = null;
+	locals.groups = groups;
+	// Locals fields are undefined unless initialized — `serverId === null` checks rely on this.
+	locals.serverId = null;
 	locals.server = null;
 
 	if (!session && locals.authRequired && !PUBLIC_PATHS.has(event.url.pathname)) {
@@ -112,16 +139,44 @@ export const handle: Handle = async ({ event, resolve }) => {
 		redirect(303, '/');
 	}
 
+	// The servers this person may use (sidebar, switcher, home), computed once per request.
+	let visible: Promise<ServerEntry[]> | undefined;
+	locals.servers = () => {
+		visible ??= (async () => {
+			if (!config || !session) return [];
+			let entries: ServerEntry[];
+			try {
+				entries = await listServers(config);
+			} catch (caught) {
+				// Discovery has no list yet: the configured servers still work.
+				console.error('[discovery] cannot list the servers:', caught);
+				entries = configuredServers(config);
+			}
+			return visibleServers(session, groups, entries);
+		})();
+		return visible;
+	};
+
 	// Resolve the active server for /server/[id]/... routes.
 	const serverParam = event.params['id'];
-	if (serverParam !== undefined && config) {
-		const index = Number(serverParam);
-		if (Number.isInteger(index) && index >= 0 && index < config.Servers.length) {
-			locals.serverIndex = index;
-			// Hide servers the user cannot see (404, so their existence is not leaked).
-			assertServerAccess(locals);
-			locals.server = config.Servers[index];
+	if (serverParam !== undefined && config && session) {
+		const t = locals.i18n.t;
+		let entry: ServerEntry | null;
+		try {
+			entry = await findServer(config, serverParam);
+		} catch (caught) {
+			console.error('[discovery] cannot list the servers:', caught);
+			error(503, t('Cannot list the Redis servers right now.'));
 		}
+		if (!entry) error(404, t('Server not found'));
+		assertServerAccess(await checkServerAccess(session, groups, entry), entry.id, t);
+		try {
+			locals.server = await connectionSettings(config, entry);
+		} catch (caught) {
+			console.error(`[discovery] cannot read the account of server ${entry.id}:`, caught);
+			error(503, t('Cannot read the password of this server right now.'));
+		}
+		locals.serverId = entry.id;
 	}
 
 	// Lazily opened Redis connections, all closed after the response settles.

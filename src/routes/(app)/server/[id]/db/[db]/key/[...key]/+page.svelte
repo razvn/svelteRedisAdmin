@@ -36,7 +36,7 @@
 		keyTypeVariant(data.type as 'string' | 'hash' | 'list' | 'set' | 'zset' | 'stream' | 'unknown')
 	);
 	const pill = $derived(ttlPill(data.ttl));
-	const back = $derived(keyHref(data.serverIndex, data.db, data.key));
+	const back = $derived(keyHref(data.serverId, data.db, data.key));
 	const hasPagination = $derived(
 		data.value.type !== 'string' && (data.offset > 0 || data.value.length === PAGE_SIZE)
 	);
@@ -73,12 +73,7 @@
 <svelte:head><title>{data.key} — svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="key-view">
-	<Breadcrumbs
-		serverIndex={data.serverIndex}
-		serverLabel={data.label}
-		db={data.db}
-		key={data.key}
-	/>
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.label} db={data.db} key={data.key} />
 
 	<PageHeader
 		title={data.key}

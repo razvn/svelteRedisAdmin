@@ -17,20 +17,20 @@
 	const t = $derived(i18n.t);
 	const tn = $derived(i18n.tn);
 
-	const hrefFor = (tab: TabDef) => serverTabHref(data.serverIndex, tabSubPath(tab.id));
+	const hrefFor = (tab: TabDef) => serverTabHref(data.serverId, tabSubPath(tab.id));
 
 	const isNumeric = (value: string) => value !== '' && !Number.isNaN(Number(value));
 
 	const sectionHref = (name: string) =>
 		name === ''
-			? serverTabHref(data.serverIndex, 'info')
-			: `${serverTabHref(data.serverIndex, 'info')}?section=${encodeURIComponent(name)}`;
+			? serverTabHref(data.serverId, 'info')
+			: `${serverTabHref(data.serverId, 'info')}?section=${encodeURIComponent(name)}`;
 </script>
 
 <svelte:head><title>{t('Info')} - {data.serverLabel} - svelteRedisAdmin</title></svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="server-info">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.serverLabel} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.serverLabel} />
 	<TabBar label={t('Server')} tabs={SERVER_TABS} current={tabSubPath('info')} {hrefFor} />
 	<PageHeader title={t('Info')} description={t('INFO output from the server')} icon={Info} />
 

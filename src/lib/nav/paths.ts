@@ -13,20 +13,20 @@ export const bare = (path: string): RuntimePath =>
 	(path.startsWith('/') ? path.slice(1) : path) as RuntimePath;
 
 /** `/server/{id}` — the server overview. */
-export const serverHref = (id: number) => `/server/${id}`;
+export const serverHref = (id: string) => `/server/${id}`;
 
 /** `/server/{id}/info` etc. */
-export const serverTabHref = (id: number, tab: string) =>
+export const serverTabHref = (id: string, tab: string) =>
 	tab === 'overview' ? serverHref(id) : `/server/${id}/${tab}`;
 
 /** `/server/{id}/db/{db}` — the key browser. */
-export const dbHref = (id: number, db: number) => `/server/${id}/db/${db}`;
+export const dbHref = (id: string, db: number) => `/server/${id}/db/${db}`;
 
 /** `/server/{id}/db/{db}/new-key`, `/export`, `/import`. */
-export const dbTabHref = (id: number, db: number, tab: string) => `${dbHref(id, db)}/${tab}`;
+export const dbTabHref = (id: string, db: number, tab: string) => `${dbHref(id, db)}/${tab}`;
 
 /** `/server/{id}/db/{db}/key/{key…}` — the key view. Key segments are URI-encoded. */
-export function keyHref(id: number, db: number, key: string): string {
+export function keyHref(id: string, db: number, key: string): string {
 	const encoded = key
 		.split('/')
 		.map((segment) => encodeURIComponent(segment))

@@ -27,13 +27,13 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6" data-testid="import">
-	<Breadcrumbs serverIndex={data.serverIndex} serverLabel={data.label} db={data.db} />
+	<Breadcrumbs serverId={data.serverId} serverLabel={data.label} db={data.db} />
 
 	<TabBar
 		label={t('Database')}
 		tabs={DB_TABS}
 		current="import"
-		hrefFor={(tab) => dbTabHref(data.serverIndex, data.db, tabSubPath(tab.id))}
+		hrefFor={(tab) => dbTabHref(data.serverId, data.db, tabSubPath(tab.id))}
 	/>
 
 	<PageHeader

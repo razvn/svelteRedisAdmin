@@ -12,7 +12,11 @@ NextAdmin-style dashboard (shared with [svelteMyAdmin](../svelteMyAdmin)).
 - TTL editing (expire/persist), rename, delete, new keys, flush database
 - Export/import a database as JSON
 - Server level: overview stats, INFO browser, CONFIG get/set, client list + kill, slow log
-- Cookie login (config `login` list) or auto-auth when no login is configured
+- Cookie login (config `login` list) or auto-auth when no login is configured; roles (`admin`, `rw`,
+  `ro`) and per-user server lists
+- Single sign-on behind an SSO proxy (oauth2-proxy…) with trusted identity headers, Kubernetes RBAC
+  per server and discovery of the Redis Services of review namespaces — see
+  [docs/KUBERNETES.md](docs/KUBERNETES.md)
 - Light/dark theme
 
 ## Stack
@@ -32,6 +36,37 @@ pnpm dev
 Configuration lives in `config.json` (git-ignored; override the path with `SRA_CONFIG`).
 Key names follow phpRedisAdmin: `Servers[]` with `name`, `host`, `port`, `auth`, `db`,
 `databases`, `filter`, `separator`, plus `login[]` + `cookieSecret` for authentication.
+
+## Single sign-on and Kubernetes
+
+Behind an SSO proxy, the `header` plugin reads who the person is from headers the proxy sets, only on
+requests coming from `auth.trustedProxies`. On Kubernetes, a server's `authorize` asks the API server
+(SubjectAccessReview) whether that person may use the server's namespace, and `ServerDiscovery` turns the
+Redis Services of labelled namespaces into servers, with the password read from a Secret:
+
+```json
+{
+	"Servers": [],
+	"auth": {
+		"plugin": "header",
+		"header": "x-auth-request-user",
+		"headerGroups": "x-auth-request-groups",
+		"trustedProxies": ["10.42.0.0/16"]
+	},
+	"cookieSecret": "a-random-string-of-32-characters-or-more",
+	"ServerDiscovery": {
+		"type": "kubernetes",
+		"namespaceSelector": "env=review",
+		"serviceSelector": "app.kubernetes.io/name=redis",
+		"secret": { "name": "redis-auth", "passwordKey": "redis-password" },
+		"authorize": { "userPrefix": "oidc:", "groupsPrefix": "oidc:" }
+	}
+}
+```
+
+Full reference (proxy setups, RBAC for the app, troubleshooting): [docs/KUBERNETES.md](docs/KUBERNETES.md).
+A `Dockerfile` and ready-made manifests with a local walkthrough are in
+[deploy/kubernetes](deploy/kubernetes/README.md).
 
 ## Development
 

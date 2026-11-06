@@ -61,7 +61,8 @@ describe('http plugin', () => {
 		const facts = await httpPlugin.authenticate({
 			request,
 			cookies: {} as never,
-			config: config()
+			config: config(),
+			peerAddress: null
 		});
 		expect(facts?.username).toBe('dev');
 	});
@@ -70,7 +71,8 @@ describe('http plugin', () => {
 		const facts = await httpPlugin.authenticate({
 			request: new Request('http://localhost/'),
 			cookies: {} as never,
-			config: config()
+			config: config(),
+			peerAddress: null
 		});
 		expect(facts).toBeNull();
 	});

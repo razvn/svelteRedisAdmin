@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const entries = Object.entries(config).sort(([a], [b]) => a.localeCompare(b));
 
 	return {
-		serverIndex: locals.serverIndex ?? 0,
+		serverId: locals.serverId ?? '0',
 		serverLabel: serverName(locals.server),
 		entries,
 		q: url.searchParams.get('q') ?? '',
@@ -55,7 +55,7 @@ export const actions: Actions = {
 
 		redirect(
 			303,
-			`/server/${locals.serverIndex ?? 0}/config?saved=${encodeURIComponent(parsed.data.parameter)}`
+			`/server/${locals.serverId ?? '0'}/config?saved=${encodeURIComponent(parsed.data.parameter)}`
 		);
 	}
 };
