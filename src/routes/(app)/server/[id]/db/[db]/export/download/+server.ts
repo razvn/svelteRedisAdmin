@@ -15,6 +15,12 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 
 	const client = await locals.redis(db);
 	const dump = await exportKeys(client, { db, filter: parsed.filter || undefined });
+	locals.audit.write({
+		event: 'export',
+		db,
+		...(parsed.filter ? { filter: parsed.filter } : {}),
+		keys: dump.keys.length
+	});
 
 	return new Response(JSON.stringify(dump, null, '\t'), {
 		headers: {

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { appConfigSchema, type AppConfig } from './schema.ts';
 
 export class ConfigError extends Error {}
@@ -55,7 +56,11 @@ export function loadConfig(configPath?: string): AppConfig {
 	for (const path of candidates) {
 		try {
 			const raw = JSON.parse(readFileSync(path, 'utf8'));
-			return parseConfig(raw);
+			const config = parseConfig(raw);
+			if (config.AuditLog?.target === 'file') {
+				config.AuditLog.path = resolve(dirname(path), config.AuditLog.path);
+			}
+			return config;
 		} catch (error) {
 			if (error instanceof ConfigError) throw error;
 			if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;

@@ -98,4 +98,16 @@ describe('guards', () => {
 			expect((caught as HttpError).body.message).toBe('Admin access required.');
 		}
 	});
+
+	test('a refusal is logged as a denied event (reason role); an allowed call logs nothing', () => {
+		const written: unknown[] = [];
+		const audit = { write: (body: unknown) => void written.push(body) };
+		expect(() => assertWrite({ ...locals({ session: session({ role: 'ro' }) }), audit })).toThrow();
+		expect(() => assertAdmin({ ...locals({ session: session({ role: 'rw' }) }), audit })).toThrow();
+		assertWrite({ ...locals({ session: session({ role: 'rw' }) }), audit });
+		expect(written).toEqual([
+			{ event: 'denied', reason: 'role', action: 'write' },
+			{ event: 'denied', reason: 'role', action: 'admin' }
+		]);
+	});
 });

@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import type { RequestAudit } from '#lib/server/audit/index.ts';
 import type { SessionInfo } from './session.ts';
 
 /** App roles: admin (everything), rw (data read/write), ro (read-only). */
@@ -46,16 +47,20 @@ export function resolveServers(
 export interface GuardLocals {
 	session: SessionInfo | null;
 	i18n: { t: (msgid: string, ...args: never[]) => string };
+	/** Refusals are logged as `denied` events (reason `role`) when the audit log is on. */
+	audit?: Pick<RequestAudit, 'write'>;
 }
 
 export function assertWrite(locals: GuardLocals): void {
 	if (!canWrite(locals.session)) {
+		locals.audit?.write({ event: 'denied', reason: 'role', action: 'write' });
 		error(403, locals.i18n.t('You are not allowed to modify data.'));
 	}
 }
 
 export function assertAdmin(locals: GuardLocals): void {
 	if (!canAdmin(locals.session)) {
+		locals.audit?.write({ event: 'denied', reason: 'role', action: 'admin' });
 		error(403, locals.i18n.t('Admin access required.'));
 	}
 }

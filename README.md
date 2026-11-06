@@ -17,6 +17,8 @@ NextAdmin-style dashboard (shared with [svelteMyAdmin](../svelteMyAdmin)).
 - Single sign-on behind an SSO proxy (oauth2-proxy…) with trusted identity headers, Kubernetes RBAC
   per server and discovery of the Redis Services of review namespaces — see
   [docs/KUBERNETES.md](docs/KUBERNETES.md)
+- Per-person audit log (JSON Lines on stdout or a file): sessions, every write and admin command with
+  its keys, console lines, exports, imports and refusals — see [docs/AUDIT.md](docs/AUDIT.md)
 - Light/dark theme
 
 ## Stack
@@ -67,6 +69,34 @@ Redis Services of labelled namespaces into servers, with the password read from 
 Full reference (proxy setups, RBAC for the app, troubleshooting): [docs/KUBERNETES.md](docs/KUBERNETES.md).
 A `Dockerfile` and ready-made manifests with a local walkthrough are in
 [deploy/kubernetes](deploy/kubernetes/README.md).
+
+## Audit log
+
+Everyone behind SSO shares one Redis password, so Redis cannot tell them apart. Turn on the audit log
+to record who did what, from where, on which server and database:
+
+```json
+{ "AuditLog": { "target": "stdout" } }
+```
+
+```json
+{
+	"ts": "2026-11-06T09:14:40.002Z",
+	"event": "command",
+	"identity": "alice",
+	"role": "rw",
+	"server": "Cache",
+	"serverId": "0",
+	"clientIp": "203.0.113.7",
+	"db": 2,
+	"command": "DEL",
+	"keys": ["session:41"],
+	"ok": true
+}
+```
+
+Values stay out of the log unless `includeValues` is on, and passwords are always masked. Events,
+options and how to ship the log from Kubernetes: [docs/AUDIT.md](docs/AUDIT.md).
 
 ## Development
 

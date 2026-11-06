@@ -51,7 +51,8 @@ export const actions: Actions = {
 
 		try {
 			const client = await locals.redis();
-			const results = await runCommands(client, input);
+			// Every command typed is logged as a `console` event, reads included.
+			const results = await locals.audit.capture('console', () => runCommands(client, input));
 			const views: ConsoleResultView[] = results.map((result) => ({
 				...result,
 				commandText: formatTokens(result.command)

@@ -380,6 +380,8 @@ Trusted headers are only as safe as the network path in front of the app.
 - **The Redis password is shared.** Everyone signed in acts with it. Give a Redis 6+ ACL user only the
   commands the team needs (`secret.usernameKey`).
 - Enforce MFA in the identity provider: the app does no second factor of its own.
+- **Turn on the [audit log](AUDIT.md)** (`"AuditLog": { "target": "stdout" }`) and ship it out of the
+  namespace. Refusals (untrusted proxy, RBAC) are logged as `denied` events.
 
 ## Troubleshooting
 
@@ -399,7 +401,8 @@ Trusted headers are only as safe as the network path in front of the app.
 ## Current limits
 
 - The role is per person, not per server: `auth.headerRole` applies to every server the person sees.
-- Redis only sees the shared password (or ACL user). Its own logs cannot tell people apart.
+- Redis only sees the shared password (or ACL user). Its own logs cannot tell people apart: turn on
+  the [audit log](AUDIT.md) to record who did what.
 - Without `authorize` (or with `ServerDiscovery.authorize: false`), authorisation is all-or-nothing:
   whoever the proxy lets through gets the server.
 - Caches (server list, Secrets, RBAC answers) are per process. With several replicas, each one asks the

@@ -4,6 +4,7 @@ import type { AppConfig, ServerConfig } from '#lib/server/config/schema.ts';
 import type { SessionInfo } from '#lib/server/auth/session.ts';
 import type { RedisConnection } from '#lib/server/redis/connection.ts';
 import type { Translator } from '#lib/i18n/translator.ts';
+import type { RequestAudit } from '#lib/server/audit/index.ts';
 
 declare global {
 	namespace App {
@@ -37,6 +38,8 @@ declare global {
 			 * automatically after the response.
 			 */
 			redis: (db?: number) => Promise<RedisConnection>;
+			/** Audit log of the request (`AuditLog`); a no-op when the log is off. */
+			audit: RequestAudit;
 		}
 		// interface Error {}
 		// interface PageData {}

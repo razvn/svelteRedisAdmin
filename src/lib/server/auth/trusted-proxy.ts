@@ -39,3 +39,25 @@ export function isTrustedProxy(ranges: readonly string[], peer: string | null): 
 	}
 	return matcher(peer);
 }
+
+/**
+ * The client address: walking `X-Forwarded-For` from the right while the hop is a trusted proxy, the
+ * first address that is not one. A peer outside `ranges` is the client itself (its header is ignored).
+ */
+export function clientAddress(
+	ranges: readonly string[],
+	peer: string | null,
+	forwardedFor: string | null
+): string | null {
+	if (!isTrustedProxy(ranges, peer) || !forwardedFor) return peer && unmapIpv4(peer);
+	const hops = forwardedFor
+		.split(',')
+		.map((hop) => unmapIpv4(hop.trim()))
+		.filter((hop) => isIP(hop) !== 0);
+	let client = peer && unmapIpv4(peer);
+	for (let i = hops.length - 1; i >= 0; i--) {
+		client = hops[i];
+		if (!isTrustedProxy(ranges, client)) break;
+	}
+	return client;
+}

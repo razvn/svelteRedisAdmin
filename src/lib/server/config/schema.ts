@@ -159,6 +159,25 @@ export const authConfigSchema = z.object({
 	trustedProxies: z.array(ipOrCidr).default([])
 });
 
+const auditLogCommon = {
+	/** Log the values of keyed commands (`SET k <value>`) and console arguments; off by default (PII). */
+	includeValues: z.boolean().default(false),
+	/** A person's next request after this much inactivity starts a new `session` event. */
+	sessionIdleMinutes: z.number().int().positive().default(30),
+	/** Longer key names and arguments are cut (and the line marked `truncated`). */
+	maxArgLength: z.number().int().positive().default(1024)
+};
+
+/**
+ * App-specific (not a phpRedisAdmin key): per-person audit log as JSON Lines, see docs/AUDIT.md.
+ * Absent = disabled. A relative `file` path resolves from the directory of the config file.
+ */
+export const auditLogSchema = z.discriminatedUnion('target', [
+	z.object({ target: z.literal('stdout'), ...auditLogCommon }),
+	z.object({ target: z.literal('file'), path: z.string().min(1), ...auditLogCommon })
+]);
+export type AuditLogConfig = z.infer<typeof auditLogSchema>;
+
 export const appConfigSchema = z.object({
 	/** Configured servers; may be empty when `ServerDiscovery` finds them. */
 	Servers: z.array(serverSchema).default([]),
@@ -171,6 +190,8 @@ export const appConfigSchema = z.object({
 	/** HMAC secret for the session cookie. Required when `login` is configured. */
 	cookieSecret: z.string().min(16).optional(),
 	cookieName: z.string().trim().min(1).default('sra_session'),
+	/** Per-person audit log (stdout or file); absent = off. See docs/AUDIT.md. */
+	AuditLog: auditLogSchema.optional(),
 	/** Session lifetime in seconds (default 24 h). */
 	cookieLifetime: z.number().int().min(60).default(86_400),
 	/** Keys listed per SCAN page (`maxKeyListSize` in phpRedisAdmin). */

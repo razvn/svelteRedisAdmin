@@ -47,6 +47,10 @@
 				<ul>
 					<li><a href="kubernetes.html" aria-current="page">Single sign-on &amp; Kubernetes</a></li>
 				</ul>
+				<h2>Operations</h2>
+				<ul>
+					<li><a href="audit.html">Audit log</a></li>
+				</ul>
 				<div class="docs-toc">
 					<h2>On this page</h2>
 					<ul>
@@ -786,6 +790,12 @@ subjects:
 						>).
 					</li>
 					<li>Enforce MFA in the identity provider: the app does no second factor of its own.</li>
+					<li>
+						<strong>Turn on the <a href="audit.html">audit log</a></strong> (<code class="inline"
+							>"AuditLog": { "target": "stdout" }</code
+						>) and ship it out of the namespace. Refusals (untrusted proxy, RBAC) are logged as
+						<code class="inline">denied</code> events.
+					</li>
 				</ul>
 				<h2 id="troubleshooting">Troubleshooting</h2>
 				<div class="table-scroll">
@@ -903,7 +913,7 @@ subjects:
 					</li>
 					<li>
 						Redis only sees the shared password (or ACL user). Its own logs cannot tell people
-						apart.
+						apart: turn on the <a href="audit.html">audit log</a> to record who did what.
 					</li>
 					<li>
 						Without <code class="inline">authorize</code> (or with

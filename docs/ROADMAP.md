@@ -141,6 +141,17 @@ makes sense, with a modern UI and a maintainable test suite.
     Server ids in routes are strings now (`locals.serverId`); configured servers keep their position.
   - `/api/health`, `Dockerfile`, `deploy/kubernetes` manifests (tried on a local k3s cluster).
 
+  ### 5b'' — Audit log ✅ DONE (see `docs/AUDIT.md`)
+
+  Ported from svelteMyAdmin's `AuditLog`, adapted to Redis.
+  - `AuditLog: { target: "stdout" | "file" }`: one JSON line per event, never stored in Redis.
+  - The request connection's `sendCommand` is wrapped: every write/admin command is a `command` event
+    (db followed through `SELECT`, keys, `ok`/`errorCode`); values only with `includeValues`;
+    passwords always masked. Console lines are `console` events (reads included); an import is one
+    `import` event; exports, logouts, sessions (signed `sra_audit` cookie) and refusals (`denied`:
+    untrusted proxy, invalid identity, bad login, server not allowed, RBAC, role) are logged too.
+  - `clientIp` follows `X-Forwarded-For` through `auth.trustedProxies`.
+
   ### 5c — Later (recorded, not scheduled)
   - **Per-user Redis credentials**: login entries may carry `redis: {username, password}` so Redis 6+
     ACLs enforce command-level permissions end-to-end; ACL DENIED errors render as friendly

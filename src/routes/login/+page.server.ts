@@ -32,6 +32,11 @@ export const actions: Actions = {
 			(entry) => entry.username === parsed.data.username && entry.password === parsed.data.password
 		);
 		if (!match) {
+			locals.audit.write({
+				event: 'denied',
+				reason: 'access-denied',
+				claimedUser: parsed.data.username
+			});
 			return fail(401, { username: parsed.data.username, error: 'Wrong username or password.' });
 		}
 

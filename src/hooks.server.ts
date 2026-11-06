@@ -7,6 +7,7 @@ import {
 	type SessionInfo
 } from '#lib/server/auth/session.ts';
 import { resolveServers } from '#lib/server/auth/access.ts';
+import { clientAddress } from '#lib/server/auth/trusted-proxy.ts';
 import { getAuthPlugin } from '#lib/server/auth/plugins/index.ts';
 import type { AuthPlugin } from '#lib/server/auth/plugins/types.ts';
 import { createConnection } from '#lib/server/redis/connection.ts';
@@ -23,7 +24,11 @@ import {
 	visibleServers
 } from '#lib/server/servers/access.ts';
 import { applyLocale, fillHtmlLang } from '#lib/server/i18n/locale.ts';
-import type { AppConfig } from '#lib/server/config/schema.ts';
+import { serverName, type AppConfig } from '#lib/server/config/schema.ts';
+import { noAudit, requestAudit, type DeniedReason } from '#lib/server/audit/index.ts';
+import { installAudit } from '#lib/server/audit/connection.ts';
+import { markActivity } from '#lib/server/audit/marker.ts';
+import type { ServerAccess } from '#lib/server/servers/access.ts';
 import type { RedisConnection } from '#lib/server/redis/connection.ts';
 
 const getConfig = loadConfigOnce(process.env['SRA_CONFIG']);
@@ -33,6 +38,13 @@ const PUBLIC_PATHS = new Set(['/login', '/logout']);
 
 /** Liveness/readiness probe: answers without config, session or Kubernetes API. */
 const HEALTH_PATH = '/api/health';
+
+/** `denied` audit reason of each server refusal. */
+const DENIED_REASON: Record<Exclude<ServerAccess, { allowed: true }>['reason'], DeniedReason> = {
+	hidden: 'server-not-allowed',
+	denied: 'not-authorized',
+	error: 'authorization-error'
+};
 
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname === HEALTH_PATH) return resolve(event);
@@ -64,16 +76,33 @@ export const handle: Handle = async ({ event, resolve }) => {
 	} catch {
 		peerAddress = null;
 	}
+	// For the audit log: the person's address, through the proxies of `auth.trustedProxies`.
+	const clientIp = clientAddress(
+		config?.auth.trustedProxies ?? [],
+		peerAddress,
+		event.request.headers.get('x-forwarded-for')
+	);
 
 	let session: SessionInfo | null = null;
 	let groups: readonly string[] = [];
+	// Identities presented but refused by the plugin: nobody verified, so no identity on the line.
+	const anonymous = config?.AuditLog
+		? requestAudit(config.AuditLog, {
+				identity: null,
+				role: null,
+				server: null,
+				serverId: null,
+				clientIp
+			})
+		: noAudit;
 	if (config && plugin && !locals.configError) {
 		if (config.auth.plugin !== 'config' || loginCount > 0) {
 			const facts = await plugin.authenticate({
 				request: event.request,
 				cookies: event.cookies,
 				config,
-				peerAddress
+				peerAddress,
+				deny: (reason, claimedUser) => anonymous.write({ event: 'denied', reason, claimedUser })
 			});
 			if (facts) {
 				groups = facts.groups ?? [];
@@ -132,6 +161,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	locals.serverId = null;
 	locals.server = null;
 
+	const audit = config?.AuditLog
+		? requestAudit(config.AuditLog, {
+				identity: session?.username ?? null,
+				role: session?.role ?? null,
+				...(session && groups.length > 0 ? { groups: [...groups] } : {}),
+				server: null,
+				serverId: null,
+				clientIp
+			})
+		: noAudit;
+	locals.audit = audit;
+
 	if (!session && locals.authRequired && !PUBLIC_PATHS.has(event.url.pathname)) {
 		redirect(303, '/login');
 	}
@@ -169,7 +210,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 			error(503, t('Cannot list the Redis servers right now.'));
 		}
 		if (!entry) error(404, t('Server not found'));
-		assertServerAccess(await checkServerAccess(session, groups, entry), entry.id, t);
+		audit.setServer({ server: serverName(entry.server), serverId: entry.id });
+		const access = await checkServerAccess(session, groups, entry);
+		if (!access.allowed) audit.write({ event: 'denied', reason: DENIED_REASON[access.reason] });
+		assertServerAccess(access, entry.id, t);
 		try {
 			locals.server = await connectionSettings(config, entry);
 		} catch (caught) {
@@ -179,13 +223,27 @@ export const handle: Handle = async ({ event, resolve }) => {
 		locals.serverId = entry.id;
 	}
 
+	// A person's first request, or the first after a pause, opens a `session` in the audit log.
+	if (config?.AuditLog && session) {
+		const fresh = markActivity(event.cookies, {
+			secret: config.cookieSecret,
+			idleMinutes: config.AuditLog.sessionIdleMinutes,
+			who: { user: session.username, server: locals.serverId }
+		});
+		if (fresh) audit.write({ event: 'session' });
+	}
+
 	// Lazily opened Redis connections, all closed after the response settles.
 	const opened = new Map<number, Promise<RedisConnection>>();
 	locals.redis = (db?: number) => {
 		if (!locals.server) throw new Error('No active server for this route');
 		const database = db ?? locals.server.db;
 		let connection = opened.get(database);
-		connection ??= createConnection(locals.server, database);
+		connection ??= createConnection(locals.server, database).then((client) => {
+			// Every command of the person on this connection passes the audit log.
+			if (audit.enabled) installAudit(client, audit, database);
+			return client;
+		});
 		opened.set(database, connection);
 		return connection;
 	};
