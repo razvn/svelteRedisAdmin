@@ -83,6 +83,11 @@ loopback only) and adds the top-level `Portal` key, which puts "Back to <label>"
 Only `http(s)` URLs are accepted. Without the key nothing changes. The audit log needs no extra setup: the
 portal user is the identity of every event.
 
+With the portal you configure the servers (give each a unique `name`, which the portal's access rules use),
+discovery and audit, and nothing about authentication: the portal writes the `header` plugin settings itself.
+What it sets, what stays yours, and how to wire your own gateway the same way:
+[docs/MULTIADMIN.md](docs/MULTIADMIN.md).
+
 ## Audit log
 
 Everyone behind SSO shares one Redis password, so Redis cannot tell them apart. Turn on the audit log

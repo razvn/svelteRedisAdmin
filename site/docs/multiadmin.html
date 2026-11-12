@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Hosted by svelteMultiAdmin - svelteRedisAdmin docs</title>
+		<meta
+			name="description"
+			content="How to run svelteRedisAdmin behind svelteMultiAdmin: what the portal sets, what you configure, the back-link and wiring your own gateway."
+		/>
+		<meta name="color-scheme" content="light dark" />
+		<meta name="theme-color" content="#6366f1" />
+		<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+		<link rel="canonical" href="https://razvn.github.io/svelteRedisAdmin/docs/multiadmin.html" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+		/>
+		<link rel="stylesheet" href="../styles.css" />
+	</head>
+	<body>
+		<a class="skip" href="#main">Skip to content</a>
+		<header class="site-header">
+			<div class="wrap">
+				<a class="brand" href="../"
+					><img src="../assets/logo.svg" alt="" width="32" height="32" /><span
+						>svelteRedisAdmin</span
+					></a
+				>
+				<nav class="nav" aria-label="Main">
+					<a href="../#features">Features</a>
+					<a href="../#quick-start">Quick start</a>
+					<a class="nav-docs" href="./" aria-current="page">Docs</a>
+					<a class="btn btn-sm" href="https://github.com/razvn/svelteRedisAdmin">GitHub</a>
+				</nav>
+			</div>
+		</header>
+		<div class="wrap docs">
+			<nav class="docs-nav" aria-label="Documentation">
+				<h2>Getting started</h2>
+				<ul>
+					<li><a href="./">Overview</a></li>
+				</ul>
+				<h2>Authentication</h2>
+				<ul>
+					<li><a href="kubernetes.html">Single sign-on &amp; Kubernetes</a></li>
+					<li><a aria-current="page" href="multiadmin.html">Hosted by svelteMultiAdmin</a></li>
+				</ul>
+				<h2>Operations</h2>
+				<ul>
+					<li><a href="audit.html">Audit log</a></li>
+				</ul>
+				<div class="docs-toc">
+					<h2>On this page</h2>
+					<ul>
+						<li><a href="#what-the-portal-sets-for-you">What the portal sets for you</a></li>
+						<li><a href="#what-you-configure">What you configure</a></li>
+						<li><a href="#the-back-link">The back-link</a></li>
+						<li><a href="#logging-out">Logging out</a></li>
+						<li><a href="#wiring-your-own-gateway">Wiring your own gateway</a></li>
+						<li><a href="#limits">Limits</a></li>
+					</ul>
+				</div>
+			</nav>
+			<main id="main" class="doc">
+				<h1>Hosted by svelteMultiAdmin</h1>
+				<p>
+					<a href="https://github.com/razvn/svelteMultiAdmin">svelteMultiAdmin</a> is a portal that
+					bundles svelteRedisAdmin and
+					<a href="https://github.com/razvn/svelteMyAdmin">svelteMyAdmin</a>. People sign in once on
+					the portal, then open this app without a second login. The portal runs this app next to
+					itself, proxies every request, and tells it who the person is. This page lists what this
+					app needs for that, what the portal does for you, and what stays your job.
+				</p>
+				<p>
+					You only need this page to understand the setup, or to wire your own gateway the same way.
+					With the portal, you write the app&#x27;s normal config (servers, discovery, audit) and
+					nothing about authentication.
+				</p>
+				<h2 id="what-the-portal-sets-for-you">What the portal sets for you</h2>
+				<p>
+					When the portal starts this app, it reads your <code class="inline">config.json</code>,
+					<strong>overwrites these keys</strong>, writes the result to a private temporary file and
+					points <code class="inline">SRA_CONFIG</code> at it:
+				</p>
+				<pre><code>{
+	&quot;auth&quot;: {
+		&quot;plugin&quot;: &quot;header&quot;,
+		&quot;header&quot;: &quot;x-multiadmin-user&quot;,
+		&quot;headerGroups&quot;: &quot;x-multiadmin-groups&quot;,
+		&quot;headerRole&quot;: &quot;x-multiadmin-role&quot;,
+		&quot;headerServers&quot;: &quot;x-multiadmin-servers&quot;,
+		&quot;trustedProxies&quot;: [&quot;127.0.0.1/32&quot;, &quot;::1/128&quot;]
+	},
+	&quot;cookieSecret&quot;: &quot;derived from the portal&#x27;s secret, unless your config already sets one&quot;,
+	&quot;Portal&quot;: { &quot;url&quot;: &quot;https://admin.example.com&quot;, &quot;label&quot;: &quot;Admin portal&quot; }
+}</code></pre>
+				<p>
+					It also starts the app with <code class="inline">HOST=127.0.0.1</code>, a loopback
+					<code class="inline">PORT</code>, and <code class="inline">ORIGIN</code> set to the
+					app&#x27;s public address, and removes <code class="inline">ADDRESS_HEADER</code>,
+					<code class="inline">XFF_DEPTH</code>, <code class="inline">PROTOCOL_HEADER</code>,
+					<code class="inline">HOST_HEADER</code>, <code class="inline">SOCKET_PATH</code> and
+					<code class="inline">BODY_SIZE_LIMIT</code> from its environment. Any
+					<code class="inline">login</code> list in your config is unused with the
+					<code class="inline">header</code> plugin.
+				</p>
+				<p>
+					This is the <a href="kubernetes.html"><code class="inline">header</code> plugin</a> with
+					the portal as the &quot;proxy&quot;: the app trusts the identity headers only from the
+					loopback address, and re-reads them on every request.
+				</p>
+				<h2 id="what-you-configure">What you configure</h2>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>In <code class="inline">config.json</code></th>
+								<th>Why it matters with the portal</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code class="inline">Servers[].name</code></td>
+								<td>
+									<strong>Give every server a unique <code class="inline">name</code>.</strong> The
+									portal&#x27;s access rules name servers by <code class="inline">name</code> (not
+									by position) and translate them into the positions the app wants. A name the app
+									does not have grants nothing.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">ServerDiscovery</code></td>
+								<td>
+									Works as documented in <a href="kubernetes.html">KUBERNETES.md</a>. Discovered
+									servers are not filtered by the portal&#x27;s server list: Kubernetes RBAC (<code
+										class="inline"
+										>authorize</code
+									>) decides who may use them.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">AuditLog</code></td>
+								<td>
+									Recommended. The portal user is the <code class="inline">identity</code> of every
+									event, with the role and the real client address. See
+									<a href="audit.html">AUDIT.md</a>.
+								</td>
+							</tr>
+							<tr>
+								<td><code class="inline">maxKeyListSize</code>, … display</td>
+								<td>Unchanged.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<p>
+					You do <strong>not</strong> write: <code class="inline">auth</code>,
+					<code class="inline">trustedProxies</code>, header names,
+					<code class="inline">Portal</code>, <code class="inline">cookieSecret</code>,
+					<code class="inline">login</code>.
+				</p>
+				<h3 id="the-role-and-the-servers">The role and the servers</h3>
+				<p>
+					The portal always sends <code class="inline">x-multiadmin-role</code> (<code
+						class="inline"
+						>ro</code
+					>, <code class="inline">rw</code> or <code class="inline">admin</code>) from its access
+					rules, so the app&#x27;s &quot;no role header means
+					<code class="inline">admin</code>&quot; default is never reached. Unless the person may
+					see every server, it also sends <code class="inline">x-multiadmin-servers</code> with the
+					positions in <code class="inline">Servers</code> of the servers they may see, possibly
+					empty. Both are enforced as described in <a href="kubernetes.html">KUBERNETES.md</a>: a
+					hidden server answers <code class="inline">404</code>, the UI hides what a role may not do
+					and the server re-checks it.
+				</p>
+				<h3 id="groups">Groups</h3>
+				<p>
+					For OIDC and trusted-header sign-in the portal passes the person&#x27;s groups in
+					<code class="inline">x-multiadmin-groups</code>, which feed
+					<code class="inline">authorize</code> (SubjectAccessReview). Groups of the portal&#x27;s
+					local accounts are never passed.
+				</p>
+				<h2 id="the-back-link">The back-link</h2>
+				<p>
+					<code class="inline">Portal</code> adds <strong>Back to &lt;label&gt;</strong> to the user
+					menu. It is optional: without it nothing changes, and an
+					<code class="inline">http(s)</code> URL is required because the value ends up in a link.
+				</p>
+				<pre><code>{ &quot;Portal&quot;: { &quot;url&quot;: &quot;https://admin.example.com&quot;, &quot;label&quot;: &quot;Admin portal&quot; } }</code></pre>
+				<h2 id="logging-out">Logging out</h2>
+				<p>
+					The portal&#x27;s session is the only session. <strong>Log out on the portal</strong> to
+					end access: it ends the session on every host. This app&#x27;s own &quot;Log out&quot;
+					only clears its cookie and returns to its sign-in page, where the header plugin signs the
+					person in again as long as their portal session lives.
+				</p>
+				<h2 id="wiring-your-own-gateway">Wiring your own gateway</h2>
+				<p>Do what the portal does:</p>
+				<ol>
+					<li>
+						Run the app so that <strong>only your gateway can reach it</strong> (loopback, a private
+						network, a NetworkPolicy), with <code class="inline">HOST</code> and
+						<code class="inline">PORT</code> set and <code class="inline">ORIGIN</code> set to the
+						public address people use.
+					</li>
+					<li>
+						Put the <code class="inline">auth</code> block above in
+						<code class="inline">config.json</code>, with
+						<code class="inline">trustedProxies</code> listing exactly your gateway&#x27;s
+						addresses.
+					</li>
+					<li>
+						In the gateway, <strong>delete</strong> <code class="inline">x-multiadmin-*</code>,
+						<code class="inline">x-auth-request-*</code>, <code class="inline">Forwarded</code> and
+						<code class="inline">X-Forwarded-*</code> from every incoming request, then set the
+						user, groups, role and servers from your own authentication. Send
+						<code class="inline">X-Forwarded-For</code> with the real client address, so the audit
+						log records it.
+					</li>
+					<li>
+						Do not set <code class="inline">ADDRESS_HEADER</code> or
+						<code class="inline">XFF_DEPTH</code> on the app: the identity check relies on the real
+						TCP peer.
+					</li>
+				</ol>
+				<p>
+					Anything else able to reach the app from a trusted address can impersonate anyone. Do not
+					run a sidecar you do not trust next to it.
+				</p>
+				<h2 id="limits">Limits</h2>
+				<ul>
+					<li>
+						One shared Redis password per server for everyone: Redis cannot tell people apart. Turn
+						on <code class="inline">AuditLog</code>.
+					</li>
+					<li>
+						The role and server list come from the portal&#x27;s access rules, not from this
+						app&#x27;s <code class="inline">login</code> list.
+					</li>
+					<li>The app has no base path: the portal serves it on its own hostname.</li>
+				</ul>
+			</main>
+		</div>
+		<footer class="site-footer">
+			<div class="wrap">
+				<div>
+					<a class="brand" href="../"
+						><img src="../assets/logo.svg" alt="" width="28" height="28" /><span
+							>svelteRedisAdmin</span
+						></a
+					>
+					<p style="margin-top: 0.75rem">
+						svelteRedisAdmin is an independent project and is not affiliated with Redis Ltd. Redis
+						is a trademark of Redis Ltd; phpRedisAdmin is a project of its respective owners.
+					</p>
+				</div>
+				<ul>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin">Source on GitHub</a></li>
+					<li><a href="https://github.com/razvn/svelteRedisAdmin/issues">Issues</a></li>
+					<li>
+						<a href="https://github.com/razvn/svelteRedisAdmin/blob/main/LICENSE"
+							>GPL-2.0-or-later</a
+						>
+					</li>
+				</ul>
+			</div>
+		</footer>
+	</body>
+</html>
