@@ -275,5 +275,6 @@
 	"You do not have access to this server (Kubernetes namespace {namespace}).": "Vous n'avez pas accès à ce serveur (namespace Kubernetes {namespace}).",
 	"Cannot verify your access right now.": "Impossible de vérifier votre accès pour le moment.",
 	"Cannot list the Redis servers right now.": "Impossible de lister les serveurs Redis pour le moment.",
-	"Cannot read the password of this server right now.": "Impossible de lire le mot de passe de ce serveur pour le moment."
+	"Cannot read the password of this server right now.": "Impossible de lire le mot de passe de ce serveur pour le moment.",
+	"Back to {label}": "Retour à {label}"
 }

@@ -26,7 +26,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			host: active === null ? '' : serverHost(active),
 			serverLabel: active === null ? t('All servers') : serverName(active),
 			serverId: activeId ?? '0',
-			canLogout: locals.authRequired
+			canLogout: locals.authRequired,
+			portal: locals.config.Portal ?? null
 		}
 	};
 };

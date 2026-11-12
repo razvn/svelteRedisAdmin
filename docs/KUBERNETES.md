@@ -5,6 +5,8 @@ proxy (oauth2-proxy, an ingress `auth-url`, Pomerium…) authenticates the perso
 provider and forwards who they are in HTTP headers. svelteRedisAdmin trusts those headers only when the
 request comes from the proxy.
 
+Running behind [svelteMultiAdmin](MULTIADMIN.md)? It sets this plugin up itself: see [MULTIADMIN.md](MULTIADMIN.md).
+
 On Kubernetes, two more pieces build on that identity:
 
 - **Kubernetes RBAC** (`authorize` on a server): a SubjectAccessReview asks the API server whether the

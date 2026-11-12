@@ -178,6 +178,13 @@ export const auditLogSchema = z.discriminatedUnion('target', [
 ]);
 export type AuditLogConfig = z.infer<typeof auditLogSchema>;
 
+/** Link back to the portal that hosts this app (svelteMultiAdmin). Only http(s): it ends up in an `href`. */
+export const portalSchema = z.object({
+	url: z.url().refine((value) => /^https?:\/\//i.test(value), 'must be an http(s) URL'),
+	label: z.string().trim().min(1).default('Portal')
+});
+export type PortalConfig = z.infer<typeof portalSchema>;
+
 export const appConfigSchema = z.object({
 	/** Configured servers; may be empty when `ServerDiscovery` finds them. */
 	Servers: z.array(serverSchema).default([]),
@@ -190,6 +197,11 @@ export const appConfigSchema = z.object({
 	/** HMAC secret for the session cookie. Required when `login` is configured. */
 	cookieSecret: z.string().min(16).optional(),
 	cookieName: z.string().trim().min(1).default('sra_session'),
+	/**
+	 * Set by svelteMultiAdmin when it hosts this app: where the "Back to <label>" link in the user menu
+	 * goes. Absent = no link. Only http(s) URLs: the value ends up in an `href`.
+	 */
+	Portal: portalSchema.optional(),
 	/** Per-person audit log (stdout or file); absent = off. See docs/AUDIT.md. */
 	AuditLog: auditLogSchema.optional(),
 	/** Session lifetime in seconds (default 24 h). */

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LayoutGrid from '@lucide/svelte/icons/layout-grid';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
@@ -11,9 +12,11 @@
 		host: string;
 		serverLabel: string;
 		canLogout: boolean;
+		/** Back-link to the hosting portal (svelteMultiAdmin). */
+		portal?: { url: string; label: string } | null;
 	}
 
-	let { user, role, host, serverLabel, canLogout }: Props = $props();
+	let { user, role, host, serverLabel, canLogout, portal = null }: Props = $props();
 
 	const i18n = useI18n();
 	const t = $derived(i18n.t);
@@ -57,6 +60,17 @@
 			<span class="truncate text-xs text-muted-foreground">{user}@{host}</span>
 			<span class="truncate text-xs text-muted-foreground">{serverLabel}</span>
 		</DropdownMenu.Label>
+		{#if portal}
+			<DropdownMenu.Separator />
+			<DropdownMenu.Item>
+				{#snippet child({ props })}
+					<a {...props} href={portal.url} rel="external" data-testid="back-to-portal">
+						<LayoutGrid />
+						{t('Back to {label}', { label: portal.label })}
+					</a>
+				{/snippet}
+			</DropdownMenu.Item>
+		{/if}
 		{#if canLogout}
 			<DropdownMenu.Separator />
 			<form method="POST" action="/logout" class="contents">
