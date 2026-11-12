@@ -20,6 +20,8 @@
 			serverLabel: string;
 			serverId: string;
 			canLogout: boolean;
+			/** Back-link to the hosting portal (svelteMultiAdmin), when configured. */
+			portal?: { url: string; label: string } | null;
 		};
 		servers: { id: string; label: string }[];
 		onsearch?: () => void;
@@ -99,6 +101,7 @@
 				host={session.host}
 				serverLabel={session.serverLabel}
 				canLogout={session.canLogout}
+				portal={session.portal}
 			/>
 		</div>
 	</div>
